@@ -1,0 +1,1762 @@
+```html
+<!DOCTYPE html>
+<html lang="fi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>Bläkkisvuohi Lite – Promillelaskuri & Live Top 10</title>
+
+    <!-- PWA & Kotivalikko-metatagit (Android & iOS Safari) -->
+    <meta name="theme-color" content="#0b0f17">
+    <meta name="application-name" content="Bläkkisvuohi Lite">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Bläkkisvuohi">
+    <meta name="description" content="Reaaliaikainen promillelaskuri, selviämisennuste ja jaettu Top 10 -tulostaulu.">
+
+    <!-- Inline SVG -sovellusikoni (ei ulkoisia kuvatiedostoja) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Crect width='128' height='128' rx='28' fill='%230b0f17'/%3E%3Crect x='6' y='6' width='116' height='116' rx='24' fill='none' stroke='%2384cc16' stroke-width='4' stroke-opacity='0.6'/%3E%3Ctext x='64' y='84' font-size='68' text-anchor='middle'%3E%F0%9F%90%90%3C/text%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%23131a26'/%3E%3Ctext x='90' y='118' font-size='96' text-anchor='middle'%3E%F0%9F%90%90%3C/text%3E%3C/svg%3E">
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    }
+                }
+            }
+        };
+    </script>
+</head>
+<body class="bg-[#0b0f17] text-slate-100 font-sans antialiased min-h-screen flex flex-col overflow-x-hidden selection:bg-lime-500/30 selection:text-lime-200">
+
+    <!-- Kelluva ilmoituspalkki (Toast) -->
+    <div id="toast-container" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4 pointer-events-none flex flex-col gap-2"></div>
+
+    <!-- Mukautettu vahvistusikkuna (korvaa selaimen confirm-ikkunan) -->
+    <div id="confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div class="bg-[#131a26] border border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+                    </svg>
+                </div>
+                <h3 id="confirm-title" class="text-lg font-extrabold text-white">Vahvista toiminto</h3>
+            </div>
+            <p id="confirm-message" class="text-sm text-slate-400 leading-relaxed"></p>
+            <div class="flex flex-col sm:flex-row gap-2.5 pt-2">
+                <button id="confirm-cancel-btn" type="button" class="flex-1 min-h-[46px] py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-sm transition">
+                    Peruuta
+                </button>
+                <button id="confirm-ok-btn" type="button" class="flex-1 min-h-[46px] py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-sm transition shadow-lg">
+                    Vahvista
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profiilin ja huoneen muokkausikkuna -->
+    <div id="edit-profile-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div class="bg-[#131a26] border border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-extrabold text-white">Profiili & Huone</h3>
+                <button id="close-edit-modal-btn" type="button" class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition" aria-label="Sulje">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="edit-profile-form" class="space-y-4" novalidate>
+                <div class="space-y-1.5">
+                    <label for="edit-name-input" class="block text-xs font-bold uppercase tracking-wider text-slate-400">Nimimerkki</label>
+                    <input id="edit-name-input" type="text" maxlength="24" required
+                        class="w-full min-h-[48px] rounded-xl bg-[#0b0f17] border border-slate-800 focus:border-lime-400 focus:ring-2 focus:ring-lime-400/20 px-4 py-2.5 text-base text-white outline-none transition">
+                </div>
+
+                <div class="space-y-1.5">
+                    <label for="edit-weight-input" class="block text-xs font-bold uppercase tracking-wider text-slate-400">Paino (40–220 kg)</label>
+                    <div class="relative">
+                        <input id="edit-weight-input" type="text" inputmode="decimal" required
+                            class="w-full min-h-[48px] rounded-xl bg-[#0b0f17] border border-slate-800 focus:border-lime-400 focus:ring-2 focus:ring-lime-400/20 px-4 py-2.5 pr-12 text-base text-white outline-none transition">
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">kg</span>
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-400">Sukupuoli (Widmark)</label>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <button type="button" data-edit-gender="male"
+                            class="edit-gender-btn min-h-[50px] py-2.5 px-3 rounded-xl border text-sm font-bold transition flex flex-col items-center justify-center bg-lime-500/15 border-lime-400 text-lime-300">
+                            <span>Mies</span>
+                            <span class="text-[11px] font-medium opacity-80">r = 0,70</span>
+                        </button>
+                        <button type="button" data-edit-gender="female"
+                            class="edit-gender-btn min-h-[50px] py-2.5 px-3 rounded-xl border text-sm font-bold transition flex flex-col items-center justify-center bg-[#0b0f17] border-slate-800 text-slate-400 hover:border-slate-700">
+                            <span>Nainen</span>
+                            <span class="text-[11px] font-medium opacity-80">r = 0,60</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label for="edit-room-input" class="block text-xs font-bold uppercase tracking-wider text-slate-400">Huonekoodi</label>
+                    <div class="flex gap-2">
+                        <input id="edit-room-input" type="text" maxlength="20" placeholder="YLEINEN"
+                            class="flex-1 min-h-[48px] rounded-xl bg-[#0b0f17] border border-slate-800 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 px-4 py-2.5 text-sm font-extrabold uppercase text-white outline-none transition">
+                        <button id="edit-room-default-btn" type="button"
+                            class="min-h-[48px] px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 transition shrink-0">
+                            YLEINEN
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-500">Jos vaihdat huonetta, tietosi siirtyvät uuden huoneen Top 10 -listalle.</p>
+                </div>
+
+                <div class="flex gap-2.5 pt-2">
+                    <button id="cancel-edit-btn" type="button" class="flex-1 min-h-[48px] py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-sm transition">
+                        Peruuta
+                    </button>
+                    <button type="submit" class="flex-1 min-h-[48px] py-2.5 px-4 rounded-xl bg-lime-400 hover:bg-lime-300 text-slate-950 font-black text-sm transition shadow-lg shadow-lime-500/20">
+                        Tallenna
+                    </button>
+                </div>
+            </form>
+
+            <!-- Poistu huoneesta -toiminto -->
+            <div class="pt-4 border-t border-slate-800/90 space-y-2">
+                <button id="leave-room-btn" type="button"
+                    class="w-full min-h-[46px] py-2.5 px-4 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 font-bold text-sm transition flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/>
+                    </svg>
+                    <span>Poistu huoneesta & poista tuloksesi</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pikavalinta huoneen vaihtamiseen (toimii myös ennen kirjautumista) -->
+    <div id="room-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div class="bg-[#131a26] border border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-extrabold text-white">Vaihda huonetta</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Kaikki samassa huoneessa näkevät saman Top 10 -listan.</p>
+                </div>
+                <button id="close-room-modal-btn" type="button" class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition" aria-label="Sulje">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <button id="join-public-room-btn" type="button"
+                class="w-full min-h-[48px] py-3 px-4 rounded-xl bg-lime-500/15 hover:bg-lime-500/25 border border-lime-400/40 text-lime-300 font-bold text-sm transition flex items-center justify-between">
+                <span>🌐 #YLEINEN (kaikille avoin)</span>
+                <span class="text-xs uppercase tracking-wider font-black">Valitse</span>
+            </button>
+
+            <form id="custom-room-form" class="space-y-3 pt-2 border-t border-slate-800/80" novalidate>
+                <label for="room-code-modal-input" class="block text-xs font-bold uppercase tracking-wider text-slate-400">Oma huonekoodi porukalle</label>
+                <div class="flex gap-2">
+                    <input id="room-code-modal-input" type="text" maxlength="20" placeholder="Esim. MOKKI26"
+                        class="flex-1 min-h-[48px] rounded-xl bg-[#0b0f17] border border-slate-800 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 px-4 py-2.5 text-sm font-extrabold uppercase text-white placeholder-slate-600 outline-none transition">
+                    <button type="submit" class="min-h-[48px] px-4 py-2.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-black text-sm transition shrink-0">
+                        Vaihda
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Yläpalkki (Header) -->
+    <header class="sticky top-0 z-40 bg-[#0b0f17]/90 backdrop-blur-md border-b border-slate-800/90">
+        <div class="max-w-xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+            <!-- Brändi ja Pilviyhteyden tila -->
+            <div class="flex items-center gap-2.5 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-lime-500/25 to-[#131a26] border border-lime-400/40 flex items-center justify-center shrink-0 shadow-inner">
+                    <span class="text-xl" role="img" aria-label="Vuohi">🐐</span>
+                </div>
+                <div class="min-w-0">
+                    <h1 class="text-base sm:text-lg font-black tracking-tight text-white truncate">Bläkkisvuohi Lite</h1>
+                    <div id="sync-status-row" class="flex items-center gap-1.5 text-[11px] font-bold text-amber-400">
+                        <span id="sync-dot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0"></span>
+                        <span id="sync-text" class="truncate">Yhdistetään pilveen...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Huonekoodi & Huoneen vaihto -->
+            <div class="flex items-center gap-2 shrink-0">
+                <button id="header-room-btn" type="button" title="Vaihda huonetta"
+                    class="min-h-[40px] py-1.5 px-3 rounded-xl bg-[#131a26] hover:bg-[#192232] border border-slate-800 hover:border-cyan-400/40 text-xs font-extrabold text-cyan-300 transition flex items-center gap-1.5">
+                    <span>#<span id="header-room-code">YLEINEN</span></span>
+                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Varoituspalkki, jos Firebase Rules estää luku/kirjoitusoikeudet -->
+    <div id="permission-warning-banner" class="hidden max-w-xl w-full mx-auto px-4 pt-4">
+        <div class="bg-rose-500/15 border border-rose-500/40 rounded-2xl p-4 text-xs text-rose-200 space-y-1">
+            <p class="font-extrabold text-rose-300">Firebase-tietokannan säännöt estävät yhteyden</p>
+            <p class="text-rose-200/90">Avaa Firebase Consolesta <strong>Realtime Database → Rules</strong> ja varmista, että polulle <code class="bg-black/40 px-1 rounded">huoneet</code> on asetettu <code class="bg-black/40 px-1 rounded">".read": true, ".write": true</code>.</p>
+        </div>
+    </div>
+
+    <!-- Pääsisältö (Yhden sarakkeen mobiiliystävällinen asettelu) -->
+    <main class="max-w-xl w-full mx-auto px-4 py-5 space-y-6 flex-1">
+
+        <!-- 1. KIRJAUTUMISNÄKYMÄ -->
+        <section id="login-section" class="bg-[#131a26] border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-5">
+            <div class="space-y-1">
+                <span class="inline-block text-xs font-extrabold uppercase tracking-wider text-lime-400">Kirjaudu sisään</span>
+                <h2 class="text-xl sm:text-2xl font-black text-white">Syötä tietosi ja liity mukaan</h2>
+                <p class="text-xs sm:text-sm text-slate-400">Promillet lasketaan Widmarkin kaavalla ja päivittyvät reaaliaikaisesti koko huoneen Top 10 -listalle.</p>
+            </div>
+
+            <form id="login-form" class="space-y-4" novalidate>
+                <!-- Nimimerkki -->
+                <div class="space-y-1.5">
+                    <label for="login-name-input" class="block text-xs font-bold uppercase tracking-wider text-slate-400">Nimimerkki</label>
+                    <input id="login-name-input" type="text" maxlength="24" required placeholder="Esim. Vuohi69 tai Matti"
+                        class="w-full min-h-[50px] rounded-xl bg-[#0b0f17] border border-slate-800 focus:border-lime-400 focus:ring-2 focus:ring-lime-400/20 px-4 py-3 text-base text-white placeholder-slate-600 outline-none transition">
+                </div>
+
+                <!-- Paino & Huonekoodi -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1.5">
+                        <label for="login-weight-input" class="block text-xs font-bold uppercase tracking-wider text-slate-400">Paino (40–220 kg)</label>
+                        <div class="relative">
+                            <input id="login-weight-input" type="text" inputmode="decimal" required placeholder="78"
+                                class="w-full min-h-[50px] rounded-xl bg-[#0b0f17] border border-slate-800 focus:border-lime-400 focus:ring-2 focus:ring-lime-400/20 px-4 py-3 pr-11 text-base text-white placeholder-slate-600 outline-none transition">
+                            <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">kg</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label for="login-room-input" class="block text-xs font-bold uppercase tracking-wider text-slate-400">Huonekoodi</label>
+                        <input id="login-room-input" type="text" maxlength="20" value="YLEINEN" placeholder="YLEINEN"
+                            class="w-full min-h-[50px] rounded-xl bg-[#0b0f17] border border-slate-800 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 px-4 py-3 text-base font-extrabold uppercase text-cyan-300 placeholder-slate-600 outline-none transition">
+                    </div>
+                </div>
+
+                <!-- Sukupuoli -->
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-400">Sukupuoli (Widmark-kerroin)</label>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <button type="button" data-login-gender="male"
+                            class="login-gender-btn min-h-[54px] py-2.5 px-3 rounded-xl border text-sm font-extrabold transition flex flex-col items-center justify-center bg-lime-500/15 border-lime-400 text-lime-300 shadow-sm">
+                            <span>Mies</span>
+                            <span class="text-[11px] font-semibold opacity-85">r = 0,70</span>
+                        </button>
+                        <button type="button" data-login-gender="female"
+                            class="login-gender-btn min-h-[54px] py-2.5 px-3 rounded-xl border text-sm font-extrabold transition flex flex-col items-center justify-center bg-[#0b0f17] border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200">
+                            <span>Nainen</span>
+                            <span class="text-[11px] font-semibold opacity-85">r = 0,60</span>
+                        </button>
+                    </div>
+                </div>
+
+                <button id="join-submit-btn" type="submit"
+                    class="w-full min-h-[56px] py-3.5 px-5 rounded-xl bg-lime-400 hover:bg-lime-300 active:scale-[0.99] text-slate-950 font-black text-base transition shadow-lg shadow-lime-500/20 flex items-center justify-center gap-2">
+                    <span>Liity mukaan</span>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.6" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
+                    </svg>
+                </button>
+            </form>
+        </section>
+
+        <!-- 2. PÄÄNÄKYMÄ KIRJAUTUMISEN JÄLKEEN -->
+        <div id="dashboard-section" class="hidden space-y-6">
+
+            <!-- OMA PROMILLEMITTARI -->
+            <section id="bac-card" class="relative overflow-hidden bg-[#131a26] border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-2xl transition-colors duration-500">
+                <div id="bac-glow" class="pointer-events-none absolute -top-24 -right-24 w-64 h-64 rounded-full bg-lime-500/10 blur-3xl transition-colors duration-500"></div>
+
+                <!-- Profiilin yläpalkki -->
+                <div class="relative flex items-center justify-between gap-2 pb-4 border-b border-slate-800/80">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span id="dash-user-name" class="text-base sm:text-lg font-black text-white truncate">Käyttäjä</span>
+                            <span id="dash-user-meta" class="text-[11px] font-bold text-slate-300 bg-[#0b0f17] border border-slate-800 px-2.5 py-0.5 rounded-full shrink-0">Mies • 80 kg</span>
+                        </div>
+                    </div>
+                    <button id="open-edit-profile-btn" type="button"
+                        class="min-h-[40px] py-1.5 px-3 rounded-xl bg-[#0b0f17] hover:bg-slate-800 border border-slate-800 text-xs font-extrabold text-cyan-300 transition flex items-center gap-1.5 shrink-0">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"/>
+                        </svg>
+                        <span>Muokkaa</span>
+                    </button>
+                </div>
+
+                <!-- Iso promillelukema & Selviämisaika -->
+                <div class="relative pt-4 space-y-4">
+                    <div class="flex items-end justify-between gap-3">
+                        <div>
+                            <p class="text-[11px] uppercase tracking-wider font-extrabold text-slate-400">Promillet nyt</p>
+                            <div class="flex items-baseline gap-2 mt-0.5">
+                                <span id="live-bac-value" class="text-5xl sm:text-6xl font-black tracking-tight tabular-nums text-lime-400 transition-colors duration-300">0,00</span>
+                                <span class="text-2xl sm:text-3xl font-extrabold text-slate-500">‰</span>
+                            </div>
+                        </div>
+                        <span id="live-bac-badge" class="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-lime-500/15 text-lime-300 border border-lime-500/30 text-right">
+                            Selvinpäin
+                        </span>
+                    </div>
+
+                    <!-- Selviämisennustelaatikko -->
+                    <div class="bg-[#0b0f17] border border-slate-800 rounded-2xl p-4 space-y-2">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-[11px] font-extrabold uppercase tracking-wider text-cyan-400">Selviämisennuste</span>
+                            <span class="text-[11px] font-semibold text-slate-500 tabular-nums">Palaminen -0,15 ‰/h</span>
+                        </div>
+                        <p id="sober-main-line" class="text-base sm:text-lg font-black text-white tabular-nums">Selvinpäin (0,00 ‰)</p>
+                        <p id="under-limit-line" class="text-xs font-semibold text-slate-400 hidden"></p>
+                    </div>
+
+                    <!-- Visuaalinen promillepalkki -->
+                    <div class="space-y-1.5">
+                        <div class="w-full h-3 bg-[#0b0f17] rounded-full overflow-hidden border border-slate-800">
+                            <div id="bac-progress-bar" class="h-full bg-lime-400 rounded-full transition-all duration-500" style="width: 0%;"></div>
+                        </div>
+                        <div class="flex justify-between text-[10px] font-bold text-slate-500 tabular-nums">
+                            <span>0,00 ‰</span>
+                            <span>0,50 ‰</span>
+                            <span>1,20 ‰</span>
+                            <span>2,00 ‰</span>
+                            <span>3,00+ ‰</span>
+                        </div>
+                    </div>
+
+                    <!-- Pikatilastot -->
+                    <div class="grid grid-cols-3 gap-2.5 pt-2">
+                        <div class="bg-[#0b0f17] rounded-xl p-3 border border-slate-800/80">
+                            <span class="block text-[11px] font-semibold text-slate-400">Annoksia</span>
+                            <span id="stat-std-drinks" class="block text-base font-black text-white tabular-nums mt-0.5">0,0</span>
+                            <span id="stat-drink-count" class="block text-[11px] text-slate-500">0 hörppyä</span>
+                        </div>
+                        <div class="bg-[#0b0f17] rounded-xl p-3 border border-slate-800/80">
+                            <span class="block text-[11px] font-semibold text-slate-400">Alkoholia</span>
+                            <span id="stat-total-grams" class="block text-base font-black text-white tabular-nums mt-0.5">0,0 g</span>
+                            <span class="block text-[11px] text-slate-500">puhdasta</span>
+                        </div>
+                        <div class="bg-[#0b0f17] rounded-xl p-3 border border-slate-800/80">
+                            <span class="block text-[11px] font-semibold text-slate-400">Poistuma</span>
+                            <span class="block text-base font-black text-cyan-400 tabular-nums mt-0.5">0,15 ‰/h</span>
+                            <span id="stat-burn-grams" class="block text-[11px] text-slate-500">~0,0 g/h</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- HÖRPPYJEN LISÄYSPANEELI -->
+            <section class="bg-[#131a26] border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-5">
+                <div>
+                    <h2 class="text-lg sm:text-xl font-black text-white flex items-center gap-2">
+                        <span>🍻</span>
+                        <span>Lisää hörppy</span>
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-0.5">Valitse juoman tilavuus ja alkoholiprosentti</p>
+                </div>
+
+                <!-- 1. Juomakoon pikavalinnat + oma tilavuus -->
+                <div class="space-y-2.5">
+                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-400">1. Juomakoko</label>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <button type="button" data-vol-l="0.33" data-label="0,33 l Tölkki" data-default-abv="4.7"
+                            class="vol-preset-btn min-h-[56px] p-3 rounded-xl border text-left transition bg-lime-500/15 border-lime-400 text-white shadow-sm">
+                            <span class="block text-sm font-extrabold">0,33 l Tölkki</span>
+                            <span class="block text-[11px] text-lime-300/85">0,33 litraa</span>
+                        </button>
+                        <button type="button" data-vol-l="0.50" data-label="0,5 l Tölkki" data-default-abv="4.7"
+                            class="vol-preset-btn min-h-[56px] p-3 rounded-xl border text-left transition bg-[#0b0f17] border-slate-800 text-slate-300 hover:border-slate-700">
+                            <span class="block text-sm font-extrabold">0,5 l Tölkki</span>
+                            <span class="block text-[11px] text-slate-500">0,50 litraa</span>
+                        </button>
+                        <button type="button" data-vol-l="0.05" data-label="0,5 dl Shotti" data-default-abv="38.0"
+                            class="vol-preset-btn min-h-[56px] p-3 rounded-xl border text-left transition bg-[#0b0f17] border-slate-800 text-slate-300 hover:border-slate-700">
+                            <span class="block text-sm font-extrabold">0,5 dl Shotti</span>
+                            <span class="block text-[11px] text-slate-500">0,05 litraa</span>
+                        </button>
+                        <button type="button" data-vol-l="0.50" data-label="0,5 l Viinapullo" data-default-abv="38.0"
+                            class="vol-preset-btn min-h-[56px] p-3 rounded-xl border text-left transition bg-[#0b0f17] border-slate-800 text-slate-300 hover:border-slate-700">
+                            <span class="block text-sm font-extrabold">0,5 l Viinapullo</span>
+                            <span class="block text-[11px] text-slate-500">0,50 litraa</span>
+                        </button>
+                        <button type="button" data-vol-l="0.70" data-label="0,7 l Viinapullo" data-default-abv="38.0"
+                            class="vol-preset-btn min-h-[56px] p-3 rounded-xl border text-left transition bg-[#0b0f17] border-slate-800 text-slate-300 hover:border-slate-700">
+                            <span class="block text-sm font-extrabold">0,7 l Viinapullo</span>
+                            <span class="block text-[11px] text-slate-500">0,70 litraa</span>
+                        </button>
+                        <div class="relative flex items-center">
+                            <input id="custom-volume-input" type="text" inputmode="decimal" value="0,33" placeholder="Muu (l)" aria-label="Oma tilavuus litroina"
+                                class="w-full h-full min-h-[56px] rounded-xl bg-[#0b0f17] border border-slate-800 focus:border-lime-400 focus:ring-2 focus:ring-lime-400/20 px-3.5 pr-9 text-sm font-extrabold text-white placeholder-slate-600 outline-none transition">
+                            <span class="absolute right-3.5 text-xs font-bold text-slate-500 pointer-events-none">l</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Alkoholiprosentin pikavalinnat + oma % -->
+                <div class="space-y-2.5">
+                    <div class="flex items-center justify-between gap-2">
+                        <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-400">2. Alkoholiprosentti (%)</label>
+                        <button id="abv-lock-pill" type="button" class="hidden text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-400/30 hover:bg-cyan-500/25 transition">
+                            🔒 Prosentti lukittu (vapauta)
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-5 gap-2">
+                        <button type="button" data-abv="4.7"
+                            class="abv-preset-btn min-h-[48px] py-2 px-1 rounded-xl border text-xs font-extrabold transition bg-lime-500/15 border-lime-400 text-lime-300">
+                            4,7 %
+                        </button>
+                        <button type="button" data-abv="5.2"
+                            class="abv-preset-btn min-h-[48px] py-2 px-1 rounded-xl border text-xs font-extrabold transition bg-[#0b0f17] border-slate-800 text-slate-300 hover:border-slate-700">
+                            5,2 %
+                        </button>
+                        <button type="button" data-abv="5.5"
+                            class="abv-preset-btn min-h-[48px] py-2 px-1 rounded-xl border text-xs font-extrabold transition bg-[#0b0f17] border-slate-800 text-slate-300 hover:border-slate-700">
+                            5,5 %
+                        </button>
+                        <button type="button" data-abv="8.0"
+                            class="abv-preset-btn min-h-[48px] py-2 px-1 rounded-xl border text-xs font-extrabold transition bg-[#0b0f17] border-slate-800 text-slate-300 hover:border-slate-700">
+                            8,0 %
+                        </button>
+                        <button type="button" data-abv="12.0"
+                            class="abv-preset-btn min-h-[48px] py-2 px-1 rounded-xl border text-xs font-extrabold transition bg-[#0b0f17] border-slate-800 text-slate-300 hover:border-slate-700">
+                            12,0 %
+                        </button>
+                        <button type="button" data-abv="21.0"
+                            class="abv-preset-btn min-h-[48px] py-2 px-1 rounded-xl border text-xs font-extrabold transition bg-[#0b0f17] border-slate-800 text-slate-300 hover:border-slate-700">
+                            21,0 %
+                        </button>
+                        <button type="button" data-abv="32.0"
+                            class="abv-preset-btn min-h-[48px] py-2 px-1 rounded-xl border text-xs font-extrabold transition bg-[#0b0f17] border-slate-800 text-slate-300 hover:border-slate-700">
+                            32,0 %
+                        </button>
+                        <button type="button" data-abv="38.0"
+                            class="abv-preset-btn min-h-[48px] py-2 px-1 rounded-xl border text-xs font-extrabold transition bg-[#0b0f17] border-slate-800 text-slate-300 hover:border-slate-700">
+                            38,0 %
+                        </button>
+                        <button type="button" data-abv="40.0"
+                            class="abv-preset-btn min-h-[48px] py-2 px-1 rounded-xl border text-xs font-extrabold transition bg-[#0b0f17] border-slate-800 text-slate-300 hover:border-slate-700">
+                            40,0 %
+                        </button>
+                        <div class="relative flex items-center">
+                            <input id="custom-abv-input" type="text" inputmode="decimal" value="4,7" placeholder="%" aria-label="Oma alkoholiprosentti"
+                                class="w-full h-full min-h-[48px] rounded-xl bg-[#0b0f17] border border-slate-800 focus:border-lime-400 focus:ring-2 focus:ring-lime-400/20 px-2 pr-5 text-xs font-extrabold text-white placeholder-slate-600 outline-none transition">
+                            <span class="absolute right-1.5 text-[11px] font-bold text-slate-500 pointer-events-none">%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Esikatselu ennen lisäystä: +promillelisäys ja uusi lukema -->
+                <div class="bg-[#0b0f17] border border-slate-800 rounded-2xl p-4 grid grid-cols-3 gap-2 text-center">
+                    <div>
+                        <span class="block text-[11px] font-semibold text-slate-400">Alkoholia</span>
+                        <span id="preview-grams" class="block text-sm sm:text-base font-black text-white tabular-nums mt-0.5">12,2 g</span>
+                    </div>
+                    <div class="border-x border-slate-800/90">
+                        <span class="block text-[11px] font-semibold text-slate-400">Juoma nostaa</span>
+                        <span id="preview-added-bac" class="block text-sm sm:text-base font-black text-amber-400 tabular-nums mt-0.5">+0,22 ‰</span>
+                    </div>
+                    <div>
+                        <span class="block text-[11px] font-semibold text-slate-400">Uusi lukema</span>
+                        <span id="preview-new-bac" class="block text-sm sm:text-base font-black text-cyan-400 tabular-nums mt-0.5">0,22 ‰</span>
+                    </div>
+                </div>
+
+                <!-- Päätoimintopainikkeet -->
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <button id="add-drink-btn" type="button"
+                        class="flex-[2] min-h-[56px] py-3.5 px-5 rounded-xl bg-lime-400 hover:bg-lime-300 active:scale-[0.99] text-slate-950 font-black text-base transition shadow-lg shadow-lime-500/20 flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.75" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                        </svg>
+                        <span>Lisää hörppy</span>
+                    </button>
+                    <button id="undo-drink-btn" type="button" disabled
+                        class="flex-1 min-h-[50px] py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none text-slate-200 font-bold text-sm transition flex items-center justify-center gap-2 border border-slate-700/80">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"/>
+                        </svg>
+                        <span>Kumoa viimeisin</span>
+                    </button>
+                </div>
+            </section>
+        </div>
+
+        <!-- 3. LIVE TOP 10 -TULOSTAULU -->
+        <section class="bg-[#131a26] border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                    <h2 class="text-lg sm:text-xl font-black text-white flex items-center gap-2">
+                        <span>🏆</span>
+                        <span>Top 10 -lista</span>
+                        <span id="leaderboard-room-badge" class="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-400/30">#YLEINEN</span>
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-0.5">Päivittyy joka sekunti kaikilla laitteilla</p>
+                </div>
+                <span id="participants-count-badge" class="text-xs font-bold px-3 py-1.5 rounded-full bg-[#0b0f17] border border-slate-800 text-slate-300 tabular-nums">
+                    0 osallistujaa
+                </span>
+            </div>
+
+            <div id="leaderboard-list" class="space-y-2.5">
+                <div class="text-center py-8 text-sm text-slate-500 bg-[#0b0f17] rounded-xl border border-slate-800/80">
+                    Ladataan huoneen tuloksia...
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. OMA JUOMAHISTORIA -->
+        <section id="history-section" class="hidden bg-[#131a26] border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between gap-2">
+                <div>
+                    <h2 class="text-base sm:text-lg font-extrabold text-white">Oma juomahistoria</h2>
+                    <p class="text-xs text-slate-400">Kirjatut juomat aikaleimoineen</p>
+                </div>
+                <button id="clear-drinks-btn" type="button" class="hidden min-h-[38px] text-xs font-bold text-rose-400 hover:text-rose-300 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 transition">
+                    Nollaa kaikki
+                </button>
+            </div>
+
+            <div id="drink-history-list" class="space-y-2">
+                <p class="text-sm text-slate-500 text-center py-4 bg-[#0b0f17] rounded-xl border border-slate-800/80">Ei vielä kirjattuja hörppyjä.</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Alatunniste -->
+    <footer class="max-w-xl w-full mx-auto px-4 py-6 text-center space-y-1 text-xs text-slate-500 border-t border-slate-900">
+        <p>Bläkkisvuohi Lite • Widmarkin kaava (Mies 0,70 / Nainen 0,60) • Palaminen 0,15 ‰/h</p>
+        <p class="text-slate-600">Laskennallinen arvio. Ei korvaa alkometria — älä aja alkoholin vaikutuksen alaisena.</p>
+    </footer>
+
+    <!-- Firebase Realtime Database v11.0.0 & Sovelluslogiikka -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+        import { getDatabase, ref, set, remove, onValue, off } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+        // =========================================================================
+        // 1. FIREBASE-KONFIGURAATIO
+        // =========================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyD7kRAHftipai9uQHyGkPlAXSIwSKDnxjI",
+            authDomain: "blakkislite.firebaseapp.com",
+            databaseURL: "https://blakkislite-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "blakkislite",
+            storageBucket: "blakkislite.firebasestorage.app",
+            messagingSenderId: "1090296320334",
+            appId: "1:1090296320334:web:9c9d53faeb2adebc878e1f"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // =========================================================================
+        // 2. VAKIOT & PAIKALLINEN TILA (localStorage)
+        // =========================================================================
+        const ETHANOL_DENSITY = 0.789;          // g/ml
+        const ELIMINATION_RATE_PER_HOUR = 0.15; // 0,15 ‰ tunnissa
+        const STANDARD_DRINK_GRAMS = 12.0;      // 1 suomalainen annos = 12 g
+        const DEFAULT_ROOM = "YLEINEN";
+        const STORAGE_KEY = "blakkisvuohi_lite_profile_v1";
+
+        let localProfile = loadLocalProfile();
+        let activeRoomCode = localProfile.roomCode || DEFAULT_ROOM;
+        let roomUsersMap = {}; // { [userId]: userObj }
+        let activeRoomRef = null;
+
+        // Lomakkeiden ja valitsimien tila
+        let loginGender = localProfile.gender || "male";
+        let editGender = localProfile.gender || "male";
+        let selectedVolumeLiters = 0.33;
+        let selectedVolumeLabel = "0,33 l Tölkki";
+        let selectedAbv = 4.7;
+        let abvManuallyLocked = false;
+
+        // =========================================================================
+        // 3. LOCALSTORAGE-HALLINTA & APUFUNKTIOT
+        // =========================================================================
+
+        function generateUserId() {
+            return `u_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+        }
+
+        function sanitizeRoomCode(raw) {
+            const cleaned = String(raw || "")
+                .trim()
+                .toUpperCase()
+                .replace(/[.#$\[\]\/\s]+/g, "");
+            return cleaned || DEFAULT_ROOM;
+        }
+
+        function loadLocalProfile() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    return {
+                        userId: parsed.userId || generateUserId(),
+                        name: parsed.name || "",
+                        weight: Number(parsed.weight) || 0,
+                        gender: parsed.gender === "female" ? "female" : "male",
+                        roomCode: sanitizeRoomCode(parsed.roomCode || DEFAULT_ROOM),
+                        joined: Boolean(parsed.joined && parsed.name && parsed.weight >= 40)
+                    };
+                }
+            } catch (e) {
+                console.warn("localStorage-luku epäonnistui:", e);
+            }
+            const fresh = {
+                userId: generateUserId(),
+                name: "",
+                weight: 0,
+                gender: "male",
+                roomCode: DEFAULT_ROOM,
+                joined: false
+            };
+            saveLocalProfile(fresh);
+            return fresh;
+        }
+
+        function saveLocalProfile(profile) {
+            localProfile = profile;
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+            } catch (e) {
+                console.warn("localStorage-tallennus epäonnistui:", e);
+            }
+        }
+
+        /**
+         * Normalisoi Firebasen palauttaman juomataulukon (Firebase palauttaa tyhjän taulukon undefined:na).
+         */
+        function normalizeDrinks(drinksField) {
+            if (Array.isArray(drinksField)) {
+                return drinksField.filter(Boolean);
+            }
+            if (drinksField && typeof drinksField === "object") {
+                return Object.values(drinksField).filter(Boolean);
+            }
+            return [];
+        }
+
+        function parseFiFloat(val) {
+            if (typeof val === "number") return val;
+            if (!val) return NaN;
+            return parseFloat(String(val).trim().replace(",", "."));
+        }
+
+        function formatFi(num, decimals = 2) {
+            if (!Number.isFinite(num)) return (0).toFixed(decimals).replace(".", ",");
+            return num.toFixed(decimals).replace(".", ",");
+        }
+
+        function formatSoberClock(targetMs, nowMs = Date.now()) {
+            const target = new Date(targetMs);
+            const now = new Date(nowMs);
+            const hh = String(target.getHours()).padStart(2, "0");
+            const mm = String(target.getMinutes()).padStart(2, "0");
+
+            const isToday =
+                target.getFullYear() === now.getFullYear() &&
+                target.getMonth() === now.getMonth() &&
+                target.getDate() === now.getDate();
+
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const isTomorrow =
+                target.getFullYear() === tomorrow.getFullYear() &&
+                target.getMonth() === tomorrow.getMonth() &&
+                target.getDate() === tomorrow.getDate();
+
+            if (isToday) return `klo ${hh}:${mm}`;
+            if (isTomorrow) return `huomenna klo ${hh}:${mm}`;
+
+            const days = ["su", "ma", "ti", "ke", "to", "pe", "la"];
+            return `${days[target.getDay()]} klo ${hh}:${mm}`;
+        }
+
+        function formatDuration(ms) {
+            if (ms <= 0) return "0 min";
+            const totalMinutes = Math.ceil(ms / 60000);
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            if (hours === 0) return `${minutes} min`;
+            if (minutes === 0) return `${hours} h`;
+            return `${hours} h ${minutes} min`;
+        }
+
+        function formatShortTime(ts) {
+            const d = new Date(ts);
+            return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        function showToast(message, type = "info") {
+            const container = document.getElementById("toast-container");
+            const toast = document.createElement("div");
+            const styles = {
+                success: "bg-[#131a26] border-lime-400/50 text-lime-300",
+                error: "bg-[#131a26] border-rose-500/50 text-rose-300",
+                info: "bg-[#131a26] border-cyan-400/40 text-slate-100"
+            };
+            toast.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-2xl text-sm font-bold transition-all duration-300 ${styles[type] || styles.info}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add("opacity-0", "translate-y-2");
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function showConfirm({ title, message, confirmText = "Vahvista", danger = true }) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById("confirm-modal");
+                const titleEl = document.getElementById("confirm-title");
+                const msgEl = document.getElementById("confirm-message");
+                const okBtn = document.getElementById("confirm-ok-btn");
+                const cancelBtn = document.getElementById("confirm-cancel-btn");
+
+                titleEl.textContent = title;
+                msgEl.textContent = message;
+                okBtn.textContent = confirmText;
+                okBtn.className = danger
+                    ? "flex-1 min-h-[46px] py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-sm transition shadow-lg"
+                    : "flex-1 min-h-[46px] py-2.5 px-4 rounded-xl bg-lime-400 hover:bg-lime-300 text-slate-950 font-black text-sm transition";
+
+                modal.classList.remove("hidden");
+                modal.classList.add("flex");
+
+                const cleanup = (result) => {
+                    modal.classList.add("hidden");
+                    modal.classList.remove("flex");
+                    okBtn.removeEventListener("click", onOk);
+                    cancelBtn.removeEventListener("click", onCancel);
+                    resolve(result);
+                };
+
+                const onOk = () => cleanup(true);
+                const onCancel = () => cleanup(false);
+
+                okBtn.addEventListener("click", onOk);
+                cancelBtn.addEventListener("click", onCancel);
+            });
+        }
+
+        // =========================================================================
+        // 4. KRONOLOGINEN WIDMARK-LASKENTA
+        // =========================================================================
+
+        /**
+         * Laskee käyttäjän tämänhetkisen promillemäärän kronologisesti juomien aikaleimojen perusteella:
+         * - Puhdas alkoholi (g) = volumeLiters * 1000 * (abv / 100) * 0.789
+         * - Promillelisäys = grams / (weight * r)  [r = 0.70 Mies, 0.60 Nainen]
+         * - Juomien välissä ja viimeisen juoman jälkeen palaminen 0.15 ‰ / h (ei koskaan alle 0.00 ‰)
+         */
+        function calculateUserBac(userObj, nowMs = Date.now()) {
+            const weight = Number(userObj.weight) || 75;
+            const r = userObj.gender === "female" ? 0.60 : 0.70;
+            const drinks = normalizeDrinks(userObj.drinks);
+            const sorted = [...drinks].sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+
+            let currentBac = 0.0;
+            let lastTimestamp = null;
+            let totalAlcoholGrams = 0.0;
+
+            for (const drink of sorted) {
+                const volLiters = Number(drink.volumeLiters) || 0;
+                const abv = Number(drink.abv) || 0;
+                const grams = volLiters * 1000 * (abv / 100) * ETHANOL_DENSITY;
+                totalAlcoholGrams += grams;
+
+                const ts = Math.min(Number(drink.timestamp) || nowMs, nowMs);
+
+                if (lastTimestamp !== null) {
+                    const elapsedHours = Math.max(0, (ts - lastTimestamp) / 3600000);
+                    currentBac = Math.max(0, currentBac - ELIMINATION_RATE_PER_HOUR * elapsedHours);
+                }
+
+                const addedBac = grams / (weight * r);
+                currentBac += addedBac;
+                lastTimestamp = ts;
+            }
+
+            if (lastTimestamp !== null) {
+                const elapsedAfterLastHours = Math.max(0, (nowMs - lastTimestamp) / 3600000);
+                currentBac = Math.max(0, currentBac - ELIMINATION_RATE_PER_HOUR * elapsedAfterLastHours);
+            }
+
+            const isSober = currentBac < 0.005;
+            const cleanBac = isSober ? 0.0 : currentBac;
+
+            let soberRemainingMs = 0;
+            let soberTimestamp = nowMs;
+            if (!isSober) {
+                const hoursToZero = cleanBac / ELIMINATION_RATE_PER_HOUR;
+                soberRemainingMs = hoursToZero * 3600000;
+                soberTimestamp = nowMs + soberRemainingMs;
+            }
+
+            let underLimitRemainingMs = 0;
+            let underLimitTimestamp = nowMs;
+            if (cleanBac > 0.50) {
+                const hoursToLimit = (cleanBac - 0.50) / ELIMINATION_RATE_PER_HOUR;
+                underLimitRemainingMs = hoursToLimit * 3600000;
+                underLimitTimestamp = nowMs + underLimitRemainingMs;
+            }
+
+            return {
+                bac: cleanBac,
+                isSober,
+                soberRemainingMs,
+                soberTimestamp,
+                underLimitRemainingMs,
+                underLimitTimestamp,
+                totalAlcoholGrams,
+                standardDrinks: totalAlcoholGrams / STANDARD_DRINK_GRAMS,
+                drinkCount: sorted.length,
+                gramsBurnedPerHour: ELIMINATION_RATE_PER_HOUR * weight * r
+            };
+        }
+
+        function getBacVisualStyle(bac) {
+            if (bac < 0.005) {
+                return {
+                    valueClass: "text-lime-400",
+                    badgeClass: "bg-lime-500/15 text-lime-300 border-lime-500/30",
+                    barClass: "bg-lime-400",
+                    glowClass: "bg-lime-500/10",
+                    borderClass: "border-slate-800",
+                    badgeLabel: "Selvinpäin"
+                };
+            }
+            if (bac < 0.50) {
+                return {
+                    valueClass: "text-cyan-400",
+                    badgeClass: "bg-cyan-500/15 text-cyan-300 border-cyan-400/35",
+                    barClass: "bg-cyan-400",
+                    glowClass: "bg-cyan-500/15",
+                    borderClass: "border-cyan-500/35",
+                    badgeLabel: "Alle 0,50 ‰"
+                };
+            }
+            if (bac < 1.20) {
+                return {
+                    valueClass: "text-amber-400",
+                    badgeClass: "bg-amber-500/15 text-amber-300 border-amber-400/35",
+                    barClass: "bg-amber-400",
+                    glowClass: "bg-amber-500/15",
+                    borderClass: "border-amber-500/40",
+                    badgeLabel: "Hyvä nousu"
+                };
+            }
+            if (bac < 2.00) {
+                return {
+                    valueClass: "text-orange-400",
+                    badgeClass: "bg-orange-500/15 text-orange-300 border-orange-400/40",
+                    barClass: "bg-orange-500",
+                    glowClass: "bg-orange-500/20",
+                    borderClass: "border-orange-500/45",
+                    badgeLabel: "Vahva humala"
+                };
+            }
+            return {
+                valueClass: "text-rose-400",
+                badgeClass: "bg-rose-500/20 text-rose-300 border-rose-500/45",
+                barClass: "bg-rose-500",
+                glowClass: "bg-rose-500/20",
+                borderClass: "border-rose-500/50",
+                badgeLabel: "Raskas sarja"
+            };
+        }
+
+        // =========================================================================
+        // 5. FIREBASE REALTIME DATABASE -SYNKRONOINTI
+        // =========================================================================
+
+        /**
+         * Seuraa pilviyhteyden tilaa (.info/connected).
+         */
+        function subscribeConnectionStatus() {
+            const connectedRef = ref(db, ".info/connected");
+            onValue(connectedRef, (snap) => {
+                const row = document.getElementById("sync-status-row");
+                const dot = document.getElementById("sync-dot");
+                const text = document.getElementById("sync-text");
+
+                if (snap.val() === true) {
+                    row.className = "flex items-center gap-1.5 text-[11px] font-bold text-lime-400";
+                    dot.className = "w-2 h-2 rounded-full bg-lime-400 animate-pulse shrink-0";
+                    text.textContent = "Live-synkka päällä";
+                } else {
+                    row.className = "flex items-center gap-1.5 text-[11px] font-bold text-rose-400";
+                    dot.className = "w-2 h-2 rounded-full bg-rose-500 shrink-0";
+                    text.textContent = "Ei yhteyttä";
+                }
+            });
+        }
+
+        /**
+         * Kuuntelee huoneen kaikkia käyttäjiä polusta `huoneet/${roomCode}/kayttajat`.
+         */
+        function subscribeToRoom(roomCode) {
+            const sanitized = sanitizeRoomCode(roomCode);
+            activeRoomCode = sanitized;
+
+            if (activeRoomRef) {
+                off(activeRoomRef);
+            }
+
+            roomUsersMap = {};
+            renderAll();
+
+            activeRoomRef = ref(db, `huoneet/${sanitized}/kayttajat`);
+            onValue(
+                activeRoomRef,
+                (snapshot) => {
+                    document.getElementById("permission-warning-banner").classList.add("hidden");
+                    const val = snapshot.val() || {};
+                    const normalizedMap = {};
+
+                    for (const [key, u] of Object.entries(val)) {
+                        if (!u || typeof u !== "object") continue;
+                        normalizedMap[key] = {
+                            id: u.id || key,
+                            name: u.name || "Nimetön",
+                            weight: Number(u.weight) || 75,
+                            gender: u.gender === "female" ? "female" : "male",
+                            drinks: normalizeDrinks(u.drinks),
+                            updatedAt: Number(u.updatedAt) || 0
+                        };
+                    }
+
+                    roomUsersMap = normalizedMap;
+
+                    // Jos käyttäjä on kirjautunut, mutta tietuetta ei vielä ole huoneessa (esim. sivu avattiin uudelleen), synkataan profiili pilveen
+                    if (localProfile.joined && !roomUsersMap[localProfile.userId]) {
+                        syncCurrentUserToFirebase(roomUsersMap[localProfile.userId]?.drinks || []);
+                    }
+
+                    renderAll();
+                },
+                (error) => {
+                    console.error("Firebase onValue virhe:", error);
+                    if (String(error.message || "").toLowerCase().includes("permission")) {
+                        document.getElementById("permission-warning-banner").classList.remove("hidden");
+                    }
+                    showToast("Tietokantayhteydessä tapahtui virhe.", "error");
+                }
+            );
+        }
+
+        /**
+         * Tallentaa nykyisen käyttäjän tiedot ja juomat polkuun `huoneet/${roomCode}/kayttajat/${userId}`.
+         */
+        async function syncCurrentUserToFirebase(drinksList) {
+            if (!localProfile.joined || !localProfile.userId) return;
+
+            const userPayload = {
+                id: localProfile.userId,
+                name: localProfile.name,
+                weight: Number(localProfile.weight),
+                gender: localProfile.gender,
+                drinks: normalizeDrinks(drinksList),
+                updatedAt: Date.now()
+            };
+
+            // Optimistinen paikallinen päivitys heti
+            roomUsersMap[localProfile.userId] = userPayload;
+            renderAll();
+
+            const userRef = ref(db, `huoneet/${activeRoomCode}/kayttajat/${localProfile.userId}`);
+            await set(userRef, userPayload);
+        }
+
+        function getCurrentUserObject() {
+            if (!localProfile.joined) return null;
+            if (roomUsersMap[localProfile.userId]) {
+                return roomUsersMap[localProfile.userId];
+            }
+            return {
+                id: localProfile.userId,
+                name: localProfile.name,
+                weight: Number(localProfile.weight) || 75,
+                gender: localProfile.gender || "male",
+                drinks: [],
+                updatedAt: Date.now()
+            };
+        }
+
+        // =========================================================================
+        // 6. KÄYTTÄJÄN TOIMINNOT
+        // =========================================================================
+
+        async function handleJoinSubmit(e) {
+            e.preventDefault();
+            const nameInput = document.getElementById("login-name-input");
+            const weightInput = document.getElementById("login-weight-input");
+            const roomInput = document.getElementById("login-room-input");
+
+            const name = nameInput.value.trim();
+            const weight = parseFiFloat(weightInput.value);
+            const roomCode = sanitizeRoomCode(roomInput.value);
+
+            if (!name) {
+                showToast("Syötä nimimerkki ensin!", "error");
+                nameInput.focus();
+                return;
+            }
+            if (!Number.isFinite(weight) || weight < 40 || weight > 220) {
+                showToast("Syötä paino väliltä 40–220 kg.", "error");
+                weightInput.focus();
+                return;
+            }
+
+            const btn = document.getElementById("join-submit-btn");
+            btn.disabled = true;
+
+            try {
+                const updatedProfile = {
+                    userId: localProfile.userId || generateUserId(),
+                    name,
+                    weight: Math.round(weight * 10) / 10,
+                    gender: loginGender,
+                    roomCode,
+                    joined: true
+                };
+
+                saveLocalProfile(updatedProfile);
+
+                if (roomCode !== activeRoomCode) {
+                    subscribeToRoom(roomCode);
+                }
+
+                const existingDrinks = roomUsersMap[updatedProfile.userId]?.drinks || [];
+                await syncCurrentUserToFirebase(existingDrinks);
+
+                showToast(`Tervetuloa huoneeseen #${roomCode}, ${name}!`, "success");
+                renderAll();
+            } catch (err) {
+                console.error("Liittyminen epäonnistui:", err);
+                showToast("Tallennus epäonnistui. Tarkista verkkoyhteys.", "error");
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function handleEditProfileSubmit(e) {
+            e.preventDefault();
+            const name = document.getElementById("edit-name-input").value.trim();
+            const weight = parseFiFloat(document.getElementById("edit-weight-input").value);
+            const newRoom = sanitizeRoomCode(document.getElementById("edit-room-input").value);
+
+            if (!name) {
+                showToast("Nimimerkki ei voi olla tyhjä.", "error");
+                return;
+            }
+            if (!Number.isFinite(weight) || weight < 40 || weight > 220) {
+                showToast("Syötä paino väliltä 40–220 kg.", "error");
+                return;
+            }
+
+            const currentDrinks = getCurrentUserObject()?.drinks || [];
+            const oldRoom = activeRoomCode;
+
+            try {
+                const updatedProfile = {
+                    ...localProfile,
+                    name,
+                    weight: Math.round(weight * 10) / 10,
+                    gender: editGender,
+                    roomCode: newRoom,
+                    joined: true
+                };
+                saveLocalProfile(updatedProfile);
+
+                if (newRoom !== oldRoom) {
+                    // Poistetaan vanhasta huoneesta ja liitytään uuteen
+                    await remove(ref(db, `huoneet/${oldRoom}/kayttajat/${localProfile.userId}`));
+                    subscribeToRoom(newRoom);
+                }
+
+                await syncCurrentUserToFirebase(currentDrinks);
+                closeEditProfileModal();
+                showToast("Tiedot päivitetty!", "success");
+            } catch (err) {
+                console.error("Profiilin muokkaus epäonnistui:", err);
+                showToast("Tietojen päivitys epäonnistui.", "error");
+            }
+        }
+
+        async function handleLeaveRoom() {
+            const ok = await showConfirm({
+                title: "Poistu huoneesta?",
+                message: `Haluatko varmasti poistua huoneesta #${activeRoomCode}? Tuloksesi poistetaan huoneen Top 10 -listalta.`,
+                confirmText: "Poistu huoneesta",
+                danger: true
+            });
+            if (!ok) return;
+
+            try {
+                await remove(ref(db, `huoneet/${activeRoomCode}/kayttajat/${localProfile.userId}`));
+                delete roomUsersMap[localProfile.userId];
+
+                saveLocalProfile({
+                    ...localProfile,
+                    joined: false
+                });
+
+                closeEditProfileModal();
+                renderAll();
+                showToast("Poistuit huoneesta.", "info");
+            } catch (err) {
+                console.error("Poistuminen epäonnistui:", err);
+                showToast("Poistuminen epäonnistui.", "error");
+            }
+        }
+
+        async function handleAddDrink() {
+            const userObj = getCurrentUserObject();
+            if (!userObj) return;
+
+            const volumeLiters = parseFiFloat(document.getElementById("custom-volume-input").value);
+            const abv = parseFiFloat(document.getElementById("custom-abv-input").value);
+
+            if (!Number.isFinite(volumeLiters) || volumeLiters <= 0 || volumeLiters > 5) {
+                showToast("Syötä kelvollinen tilavuus litroina (esim. 0,33).", "error");
+                return;
+            }
+            if (!Number.isFinite(abv) || abv <= 0 || abv > 100) {
+                showToast("Syötä kelvollinen alkoholiprosentti (0,1–100 %).", "error");
+                return;
+            }
+
+            const roundedVol = Math.round(volumeLiters * 1000) / 1000;
+            const roundedAbv = Math.round(abv * 10) / 10;
+
+            const newDrink = {
+                id: `d_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                label: selectedVolumeLabel || `${formatFi(roundedVol, 2)} l`,
+                volumeLiters: roundedVol,
+                abv: roundedAbv,
+                timestamp: Date.now()
+            };
+
+            const nextDrinks = [...normalizeDrinks(userObj.drinks), newDrink];
+
+            try {
+                await syncCurrentUserToFirebase(nextDrinks);
+                showToast(`Lisätty: ${formatFi(roundedVol, 2)} l (${formatFi(roundedAbv, 1)} %)`, "success");
+            } catch (err) {
+                console.error("Hörpyn lisäys epäonnistui:", err);
+                showToast("Hörpyn tallennus epäonnistui.", "error");
+            }
+        }
+
+        async function handleUndoLastDrink() {
+            const userObj = getCurrentUserObject();
+            if (!userObj) return;
+            const drinks = normalizeDrinks(userObj.drinks);
+            if (drinks.length === 0) return;
+
+            const nextDrinks = drinks.slice(0, -1);
+            try {
+                await syncCurrentUserToFirebase(nextDrinks);
+                showToast("Viimeisin hörppy kumottu.", "info");
+            } catch (err) {
+                console.error("Kumous epäonnistui:", err);
+                showToast("Kumoaminen epäonnistui.", "error");
+            }
+        }
+
+        async function handleDeleteSingleDrink(drinkId) {
+            const userObj = getCurrentUserObject();
+            if (!userObj) return;
+            const nextDrinks = normalizeDrinks(userObj.drinks).filter((d) => d.id !== drinkId);
+
+            try {
+                await syncCurrentUserToFirebase(nextDrinks);
+                showToast("Hörppy poistettu.", "info");
+            } catch (err) {
+                console.error("Poisto epäonnistui:", err);
+                showToast("Poisto epäonnistui.", "error");
+            }
+        }
+
+        async function handleClearAllDrinks() {
+            const ok = await showConfirm({
+                title: "Nollaa kaikki hörpyt?",
+                message: "Haluatko varmasti poistaa kaikki kirjaamasi juomat? Promillet palautuvat nollaan.",
+                confirmText: "Nollaa kaikki",
+                danger: true
+            });
+            if (!ok) return;
+
+            try {
+                await syncCurrentUserToFirebase([]);
+                showToast("Kaikki hörpyt nollattu.", "info");
+            } catch (err) {
+                console.error("Nollaus epäonnistui:", err);
+                showToast("Nollaus epäonnistui.", "error");
+            }
+        }
+
+        async function switchActiveRoomQuick(targetRoomRaw) {
+            const newRoom = sanitizeRoomCode(targetRoomRaw);
+            const oldRoom = activeRoomCode;
+
+            if (newRoom === oldRoom) {
+                closeRoomModal();
+                return;
+            }
+
+            const currentDrinks = getCurrentUserObject()?.drinks || [];
+
+            saveLocalProfile({
+                ...localProfile,
+                roomCode: newRoom
+            });
+
+            document.getElementById("login-room-input").value = newRoom;
+
+            if (localProfile.joined) {
+                try {
+                    await remove(ref(db, `huoneet/${oldRoom}/kayttajat/${localProfile.userId}`));
+                } catch (e) {
+                    console.warn("Vanhan huoneen siivous:", e);
+                }
+            }
+
+            subscribeToRoom(newRoom);
+
+            if (localProfile.joined) {
+                await syncCurrentUserToFirebase(currentDrinks);
+            }
+
+            closeRoomModal();
+            showToast(`Huone vaihdettu: #${newRoom}`, "info");
+        }
+
+        // =========================================================================
+        // 7. KÄYTTÖLIITTYMÄN RENDERÖINTI (PÄIVITTYY JOKA SEKUNTI)
+        // =========================================================================
+
+        /**
+         * Päivittää juoman esikatselukortin (+promillelisäys ja uusi kokonaislukema).
+         */
+        function updateDrinkPreviewCard(nowMs = Date.now()) {
+            const volumeLiters = parseFiFloat(document.getElementById("custom-volume-input").value);
+            const abv = parseFiFloat(document.getElementById("custom-abv-input").value);
+
+            const gramsEl = document.getElementById("preview-grams");
+            const addedEl = document.getElementById("preview-added-bac");
+            const newBacEl = document.getElementById("preview-new-bac");
+
+            const userObj = getCurrentUserObject();
+            const weight = userObj ? Number(userObj.weight) : 75;
+            const r = userObj && userObj.gender === "female" ? 0.60 : 0.70;
+            const currentStats = userObj ? calculateUserBac(userObj, nowMs) : { bac: 0 };
+
+            if (!Number.isFinite(volumeLiters) || volumeLiters <= 0 || !Number.isFinite(abv) || abv <= 0) {
+                gramsEl.textContent = "— g";
+                addedEl.textContent = "+0,00 ‰";
+                newBacEl.textContent = `${formatFi(currentStats.bac, 2)} ‰`;
+                return;
+            }
+
+            const grams = volumeLiters * 1000 * (abv / 100) * ETHANOL_DENSITY;
+            const addedBac = grams / (weight * r);
+            const projectedBac = currentStats.bac + addedBac;
+
+            gramsEl.textContent = `${formatFi(grams, 1)} g`;
+            addedEl.textContent = `+${formatFi(addedBac, 2)} ‰`;
+            newBacEl.textContent = `${formatFi(projectedBac, 2)} ‰`;
+        }
+
+        /**
+         * Päivittää oman promillemittarin ja selviämisennusteen (ajetaan joka sekunti).
+         */
+        function renderDashboardMetrics(nowMs = Date.now()) {
+            const userObj = getCurrentUserObject();
+            if (!userObj) return;
+
+            const stats = calculateUserBac(userObj, nowMs);
+            const style = getBacVisualStyle(stats.bac);
+
+            document.getElementById("dash-user-name").textContent = userObj.name;
+            const genderLabel = userObj.gender === "female" ? "Nainen" : "Mies";
+            const weightLabel = formatFi(userObj.weight, userObj.weight % 1 === 0 ? 0 : 1);
+            document.getElementById("dash-user-meta").textContent = `${genderLabel} • ${weightLabel} kg`;
+
+            const bacValEl = document.getElementById("live-bac-value");
+            const bacBadgeEl = document.getElementById("live-bac-badge");
+            const bacCardEl = document.getElementById("bac-card");
+            const bacGlowEl = document.getElementById("bac-glow");
+            const barEl = document.getElementById("bac-progress-bar");
+
+            bacValEl.textContent = formatFi(stats.bac, 2);
+            bacValEl.className = `text-5xl sm:text-6xl font-black tracking-tight tabular-nums transition-colors duration-300 ${style.valueClass}`;
+
+            bacBadgeEl.textContent = style.badgeLabel;
+            bacBadgeEl.className = `px-3 py-1.5 rounded-xl text-xs font-extrabold border ${style.badgeClass}`;
+
+            bacCardEl.className = `relative overflow-hidden bg-[#131a26] border ${style.borderClass} rounded-2xl p-5 sm:p-6 shadow-2xl transition-colors duration-500`;
+            bacGlowEl.className = `pointer-events-none absolute -top-24 -right-24 w-64 h-64 rounded-full ${style.glowClass} blur-3xl transition-colors duration-500`;
+
+            const fillPct = Math.min(100, (stats.bac / 3.0) * 100);
+            barEl.style.width = `${fillPct}%`;
+            barEl.className = `h-full ${style.barClass} rounded-full transition-all duration-500`;
+
+            // Selviämisennuste
+            const soberMainEl = document.getElementById("sober-main-line");
+            const underLimitEl = document.getElementById("under-limit-line");
+
+            if (stats.isSober) {
+                soberMainEl.textContent = "Selvinpäin (0,00 ‰)";
+                underLimitEl.classList.add("hidden");
+            } else {
+                const clockStr = formatSoberClock(stats.soberTimestamp, nowMs);
+                const durStr = formatDuration(stats.soberRemainingMs);
+                soberMainEl.textContent = `Selvinpäin ${clockStr} (${durStr})`;
+
+                underLimitEl.classList.remove("hidden");
+                if (stats.bac > 0.50) {
+                    const limitClock = formatSoberClock(stats.underLimitTimestamp, nowMs);
+                    const limitDur = formatDuration(stats.underLimitRemainingMs);
+                    underLimitEl.textContent = `Alle 0,50 ‰ ${limitClock} (${limitDur})`;
+                } else {
+                    underLimitEl.textContent = "Alle 0,50 ‰ nyt";
+                }
+            }
+
+            // Pikatilastot
+            document.getElementById("stat-std-drinks").textContent = formatFi(stats.standardDrinks, 1);
+            document.getElementById("stat-drink-count").textContent = `${stats.drinkCount} ${stats.drinkCount === 1 ? "hörppy" : "hörppyä"}`;
+            document.getElementById("stat-total-grams").textContent = `${formatFi(stats.totalAlcoholGrams, 1)} g`;
+            document.getElementById("stat-burn-grams").textContent = `~${formatFi(stats.gramsBurnedPerHour, 1)} g/h`;
+
+            document.getElementById("undo-drink-btn").disabled = stats.drinkCount === 0;
+        }
+
+        /**
+         * Päivittää oman juomahistorian.
+         */
+        function renderDrinkHistory() {
+            const userObj = getCurrentUserObject();
+            const listEl = document.getElementById("drink-history-list");
+            const clearBtn = document.getElementById("clear-drinks-btn");
+
+            const drinks = userObj ? normalizeDrinks(userObj.drinks) : [];
+            if (drinks.length === 0) {
+                listEl.innerHTML = '<p class="text-sm text-slate-500 text-center py-4 bg-[#0b0f17] rounded-xl border border-slate-800/80">Ei vielä kirjattuja hörppyjä.</p>';
+                clearBtn.classList.add("hidden");
+                return;
+            }
+
+            clearBtn.classList.remove("hidden");
+
+            const newestFirst = [...drinks].sort((a, b) => Number(b.timestamp) - Number(a.timestamp));
+
+            listEl.innerHTML = newestFirst.map((drink) => {
+                const volL = Number(drink.volumeLiters) || 0;
+                const abv = Number(drink.abv) || 0;
+                const timeStr = formatShortTime(Number(drink.timestamp));
+                const grams = volL * 1000 * (abv / 100) * ETHANOL_DENSITY;
+
+                return `
+                    <div class="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-[#0b0f17] border border-slate-800/90">
+                        <div class="min-w-0">
+                            <p class="text-sm font-extrabold text-slate-100 truncate tabular-nums">
+                                <span class="text-lime-400">${timeStr}</span> — ${formatFi(volL, 2)} l (${formatFi(abv, 1)} %)
+                            </p>
+                            <p class="text-xs text-slate-500 mt-0.5 tabular-nums">
+                                ${escapeHtml(drink.label || `${formatFi(volL, 2)} l`)} • ${formatFi(grams, 1)} g alkoholia
+                            </p>
+                        </div>
+                        <button type="button" data-del-drink="${escapeHtml(drink.id)}" aria-label="Poista juoma"
+                            class="min-w-[42px] min-h-[42px] flex items-center justify-center rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 border border-transparent hover:border-rose-500/30 text-lg font-black transition shrink-0">
+                            ×
+                        </button>
+                    </div>
+                `;
+            }).join("");
+
+            listEl.querySelectorAll("[data-del-drink]").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    handleDeleteSingleDrink(btn.getAttribute("data-del-drink"));
+                });
+            });
+        }
+
+        /**
+         * Laskee joka sekunti kaikkien huoneen käyttäjien promillet ja renderöi Top 10 -listan.
+         */
+        function renderLeaderboard(nowMs = Date.now()) {
+            const listEl = document.getElementById("leaderboard-list");
+            const countBadge = document.getElementById("participants-count-badge");
+            const roomBadge = document.getElementById("leaderboard-room-badge");
+
+            roomBadge.textContent = `#${activeRoomCode}`;
+
+            const allUsers = Object.values(roomUsersMap);
+            countBadge.textContent = `${allUsers.length} ${allUsers.length === 1 ? "osallistuja" : "osallistujaa"}`;
+
+            if (allUsers.length === 0) {
+                listEl.innerHTML = `
+                    <div class="text-center py-8 px-4 text-sm text-slate-400 bg-[#0b0f17] rounded-xl border border-slate-800/80">
+                        Huoneessa <span class="text-cyan-300 font-extrabold">#${escapeHtml(activeRoomCode)}</span> ei ole vielä ketään. Liity ensimmäisenä mukaan! 🐐
+                    </div>
+                `;
+                return;
+            }
+
+            const ranked = allUsers
+                .map((u) => ({
+                    user: u,
+                    stats: calculateUserBac(u, nowMs)
+                }))
+                .sort((a, b) => {
+                    // 1. Suurin senhetkinen promillemäärä ensin
+                    if (Math.abs(b.stats.bac - a.stats.bac) > 0.0001) {
+                        return b.stats.bac - a.stats.bac;
+                    }
+                    // 2. Tasatilanteessa enemmän puhdasta alkoholia juonut ensin
+                    if (Math.abs(b.stats.totalAlcoholGrams - a.stats.totalAlcoholGrams) > 0.01) {
+                        return b.stats.totalAlcoholGrams - a.stats.totalAlcoholGrams;
+                    }
+                    // 3. Uudempi kirjaus ensin
+                    return (b.user.updatedAt || 0) - (a.user.updatedAt || 0);
+                })
+                .slice(0, 10);
+
+            listEl.innerHTML = ranked.map((entry, index) => {
+                const rank = index + 1;
+                const { user, stats } = entry;
+                const isMe = localProfile.joined && user.id === localProfile.userId;
+                const style = getBacVisualStyle(stats.bac);
+
+                let rankBadge = `<span class="w-9 h-9 rounded-xl bg-[#131a26] border border-slate-800 text-xs font-black text-slate-400 flex items-center justify-center shrink-0 tabular-nums">${rank}.</span>`;
+                if (rank === 1) {
+                    rankBadge = `<span class="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-400/60 text-amber-300 text-sm font-black flex items-center justify-center shrink-0 shadow-sm shadow-amber-500/20">🥇 1</span>`;
+                } else if (rank === 2) {
+                    rankBadge = `<span class="w-9 h-9 rounded-xl bg-slate-300/15 border border-slate-300/40 text-slate-200 text-sm font-black flex items-center justify-center shrink-0">🥈 2</span>`;
+                } else if (rank === 3) {
+                    rankBadge = `<span class="w-9 h-9 rounded-xl bg-orange-600/20 border border-orange-500/50 text-orange-300 text-sm font-black flex items-center justify-center shrink-0">🥉 3</span>`;
+                }
+
+                const soberText = stats.isSober
+                    ? "Selvinpäin"
+                    : `Selvä ${formatSoberClock(stats.soberTimestamp, nowMs)}`;
+
+                const rowBorder = isMe
+                    ? "bg-lime-500/10 border-lime-400/50 shadow-md shadow-lime-950/20"
+                    : "bg-[#0b0f17] border-slate-800/90";
+
+                return `
+                    <div class="flex items-center justify-between gap-3 p-3.5 rounded-xl border ${rowBorder} transition-colors">
+                        <div class="flex items-center gap-3 min-w-0">
+                            ${rankBadge}
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm sm:text-base font-extrabold text-white truncate">${escapeHtml(user.name)}</span>
+                                    ${isMe ? '<span class="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-lime-400/20 text-lime-300 border border-lime-400/40 shrink-0">Sinä</span>' : ""}
+                                </div>
+                                <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-400 mt-0.5 tabular-nums">
+                                    <span>${formatFi(stats.standardDrinks, 1)} annosta</span>
+                                    <span class="text-slate-600">•</span>
+                                    <span class="${stats.isSober ? "text-slate-500" : "text-cyan-300/90 font-semibold"}">${soberText}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-right shrink-0">
+                            <div class="text-lg sm:text-xl font-black tabular-nums ${style.valueClass}">
+                                ${formatFi(stats.bac, 2)} <span class="text-xs font-bold text-slate-500">‰</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function renderAll() {
+            const nowMs = Date.now();
+            document.getElementById("header-room-code").textContent = activeRoomCode;
+
+            const loginSec = document.getElementById("login-section");
+            const dashSec = document.getElementById("dashboard-section");
+            const histSec = document.getElementById("history-section");
+
+            if (localProfile.joined) {
+                loginSec.classList.add("hidden");
+                dashSec.classList.remove("hidden");
+                histSec.classList.remove("hidden");
+
+                renderDashboardMetrics(nowMs);
+                renderDrinkHistory();
+                updateDrinkPreviewCard(nowMs);
+            } else {
+                loginSec.classList.remove("hidden");
+                dashSec.classList.add("hidden");
+                histSec.classList.add("hidden");
+            }
+
+            renderLeaderboard(nowMs);
+        }
+
+        // =========================================================================
+        // 8. MODAALIT & TAPAHTUMAKUUNTELIJAT
+        // =========================================================================
+
+        function updateLoginGenderButtons() {
+            document.querySelectorAll(".login-gender-btn").forEach((btn) => {
+                const active = btn.getAttribute("data-login-gender") === loginGender;
+                btn.className = active
+                    ? "login-gender-btn min-h-[54px] py-2.5 px-3 rounded-xl border text-sm font-extrabold transition flex flex-col items-center justify-center bg-lime-500/15 border-lime-400 text-lime-300 shadow-sm"
+                    : "login-gender-btn min-h-[54px] py-2.5 px-3 rounded-xl border text-sm font-extrabold transition flex flex-col items-center justify-center bg-[#0b0f17] border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200";
+            });
+        }
+
+        function updateEditGenderButtons() {
+            document.querySelectorAll(".edit-gender-btn").forEach((btn) => {
+                const active = btn.getAttribute("data-edit-gender") === editGender;
+                btn.className = active
+                    ? "edit-gender-btn min-h-[50px] py-2.5 px-3 rounded-xl border text-sm font-bold transition flex flex-col items-center justify-center bg-lime-500/15 border-lime-400 text-lime-300"
+                    : "edit-gender-btn min-h-[50px] py-2.5 px-3 rounded-xl border text-sm font-bold transition flex flex-col items-center justify-center bg-[#0b0f17] border-slate-800 text-slate-400 hover:border-slate-700";
+            });
+        }
+
+        function openEditProfileModal() {
+            const userObj = getCurrentUserObject();
+            if (!userObj) return;
+
+            document.getElementById("edit-name-input").value = userObj.name;
+            document.getElementById("edit-weight-input").value = formatFi(userObj.weight, userObj.weight % 1 === 0 ? 0 : 1);
+            document.getElementById("edit-room-input").value = activeRoomCode;
+            editGender = userObj.gender === "female" ? "female" : "male";
+            updateEditGenderButtons();
+
+            const modal = document.getElementById("edit-profile-modal");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        }
+
+        function closeEditProfileModal() {
+            const modal = document.getElementById("edit-profile-modal");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        }
+
+        function openRoomModal() {
+            document.getElementById("room-code-modal-input").value = activeRoomCode === DEFAULT_ROOM ? "" : activeRoomCode;
+            const modal = document.getElementById("room-modal");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        }
+
+        function closeRoomModal() {
+            const modal = document.getElementById("room-modal");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        }
+
+        function updateAbvLockIndicator() {
+            const pill = document.getElementById("abv-lock-pill");
+            if (abvManuallyLocked) {
+                pill.classList.remove("hidden");
+            } else {
+                pill.classList.add("hidden");
+            }
+        }
+
+        function highlightAbvButtons(targetAbv) {
+            document.querySelectorAll(".abv-preset-btn").forEach((btn) => {
+                const btnAbv = Number(btn.getAttribute("data-abv"));
+                const active = Number.isFinite(targetAbv) && Math.abs(btnAbv - targetAbv) < 0.01;
+                btn.className = active
+                    ? "abv-preset-btn min-h-[48px] py-2 px-1 rounded-xl border text-xs font-extrabold transition bg-lime-500/15 border-lime-400 text-lime-300"
+                    : "abv-preset-btn min-h-[48px] py-2 px-1 rounded-xl border text-xs font-extrabold transition bg-[#0b0f17] border-slate-800 text-slate-300 hover:border-slate-700";
+            });
+        }
+
+        function setupEventListeners() {
+            // Esitäytetään kirjautumislomake tallennetuilla tiedoilla
+            if (localProfile.name) {
+                document.getElementById("login-name-input").value = localProfile.name;
+            }
+            if (localProfile.weight >= 40) {
+                document.getElementById("login-weight-input").value = formatFi(localProfile.weight, localProfile.weight % 1 === 0 ? 0 : 1);
+            }
+            document.getElementById("login-room-input").value = activeRoomCode;
+            updateLoginGenderButtons();
+
+            // Kirjautumislomakkeen sukupuolivalinta
+            document.querySelectorAll(".login-gender-btn").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    loginGender = btn.getAttribute("data-login-gender");
+                    updateLoginGenderButtons();
+                });
+            });
+
+            // Kirjautuminen
+            document.getElementById("login-form").addEventListener("submit", handleJoinSubmit);
+
+            // Profiilin muokkaus
+            document.getElementById("open-edit-profile-btn").addEventListener("click", openEditProfileModal);
+            document.getElementById("close-edit-modal-btn").addEventListener("click", closeEditProfileModal);
+            document.getElementById("cancel-edit-btn").addEventListener("click", closeEditProfileModal);
+            document.getElementById("edit-profile-form").addEventListener("submit", handleEditProfileSubmit);
+            document.getElementById("edit-room-default-btn").addEventListener("click", () => {
+                document.getElementById("edit-room-input").value = DEFAULT_ROOM;
+            });
+            document.getElementById("leave-room-btn").addEventListener("click", handleLeaveRoom);
+
+            document.querySelectorAll(".edit-gender-btn").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    editGender = btn.getAttribute("data-edit-gender");
+                    updateEditGenderButtons();
+                });
+            });
+
+            // Yläpalkin huonevalitsin
+            document.getElementById("header-room-btn").addEventListener("click", openRoomModal);
+            document.getElementById("close-room-modal-btn").addEventListener("click", closeRoomModal);
+            document.getElementById("join-public-room-btn").addEventListener("click", () => switchActiveRoomQuick(DEFAULT_ROOM));
+            document.getElementById("custom-room-form").addEventListener("submit", (e) => {
+                e.preventDefault();
+                const val = document.getElementById("room-code-modal-input").value;
+                switchActiveRoomQuick(val);
+            });
+
+            // Juomakoon pikavalinnat
+            const volInput = document.getElementById("custom-volume-input");
+            const abvInput = document.getElementById("custom-abv-input");
+
+            document.querySelectorAll(".vol-preset-btn").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    selectedVolumeLiters = Number(btn.getAttribute("data-vol-l"));
+                    selectedVolumeLabel = btn.getAttribute("data-label");
+                    volInput.value = formatFi(selectedVolumeLiters, 2);
+
+                    // Jos alkoholiprosenttia ei ole erikseen lukittu, asetetaan juomatyypin oletusprosentti
+                    if (!abvManuallyLocked) {
+                        const defAbv = Number(btn.getAttribute("data-default-abv"));
+                        if (Number.isFinite(defAbv)) {
+                            selectedAbv = defAbv;
+                            abvInput.value = formatFi(selectedAbv, 1);
+                            highlightAbvButtons(selectedAbv);
+                        }
+                    }
+
+                    document.querySelectorAll(".vol-preset-btn").forEach((b) => {
+                        const active = b === btn;
+                        b.className = active
+                            ? "vol-preset-btn min-h-[56px] p-3 rounded-xl border text-left transition bg-lime-500/15 border-lime-400 text-white shadow-sm"
+                            : "vol-preset-btn min-h-[56px] p-3 rounded-xl border text-left transition bg-[#0b0f17] border-slate-800 text-slate-300 hover:border-slate-700";
+                    });
+
+                    updateDrinkPreviewCard();
+                });
+            });
+
+            // Vapaa tilavuuskenttä
+            volInput.addEventListener("input", () => {
+                const val = parseFiFloat(volInput.value);
+                selectedVolumeLiters = val;
+                selectedVolumeLabel = Number.isFinite(val) && val > 0 ? `Muu (${formatFi(val, 2)} l)` : "Muu juoma";
+                document.querySelectorAll(".vol-preset-btn").forEach((b) => {
+                    b.className = "vol-preset-btn min-h-[56px] p-3 rounded-xl border text-left transition bg-[#0b0f17] border-slate-800 text-slate-300 hover:border-slate-700";
+                });
+                updateDrinkPreviewCard();
+            });
+
+            // Alkoholiprosentin pikavalinnat (lukitsee valitun prosentin)
+            document.querySelectorAll(".abv-preset-btn").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    selectedAbv = Number(btn.getAttribute("data-abv"));
+                    abvInput.value = formatFi(selectedAbv, 1);
+                    abvManuallyLocked = true;
+                    updateAbvLockIndicator();
+                    highlightAbvButtons(selectedAbv);
+                    updateDrinkPreviewCard();
+                });
+            });
+
+            // Vapaa alkoholiprosentti
+            abvInput.addEventListener("input", () => {
+                const val = parseFiFloat(abvInput.value);
+                selectedAbv = val;
+                abvManuallyLocked = true;
+                updateAbvLockIndicator();
+                highlightAbvButtons(val);
+                updateDrinkPreviewCard();
+            });
+
+            // Lukituksen vapautus
+            document.getElementById("abv-lock-pill").addEventListener("click", () => {
+                abvManuallyLocked = false;
+                updateAbvLockIndicator();
+                showToast("Prosenttilukitus vapautettu.", "info");
+            });
+
+            // Toimintopainikkeet
+            document.getElementById("add-drink-btn").addEventListener("click", handleAddDrink);
+            document.getElementById("undo-drink-btn").addEventListener("click", handleUndoLastDrink);
+            document.getElementById("clear-drinks-btn").addEventListener("click", handleClearAllDrinks);
+        }
+
+        // =========================================================================
+        // 9. KÄYNNISTYS
+        // =========================================================================
+
+        window.addEventListener("DOMContentLoaded", () => {
+            setupEventListeners();
+            subscribeConnectionStatus();
+            subscribeToRoom(activeRoomCode);
+            renderAll();
+
+            // Päivittää omat promillet, esikatselun, selviämisennusteen ja Top 10 -listan joka sekunti
+            setInterval(() => {
+                const nowMs = Date.now();
+                if (localProfile.joined) {
+                    renderDashboardMetrics(nowMs);
+                    updateDrinkPreviewCard(nowMs);
+                }
+                renderLeaderboard(nowMs);
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
+```
