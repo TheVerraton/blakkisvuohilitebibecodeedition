@@ -318,6 +318,8 @@
       color: #ecfccb;
     }
     .abv-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+    .pace-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+    .pace-grid .chip { font-size: 12px; line-height: 1.25; padding: 8px 6px; }
     .preview-box {
       margin-top: 12px;
       background: var(--card-inner);
@@ -521,7 +523,7 @@
     <section class="card" id="loginCard">
       <div class="eyebrow">Kirjaudu sisään</div>
       <h2>Syötä tietosi ja liity mukaan</h2>
-      <p class="sub">Promillet lasketaan Widmarkin kaavalla (35 min imeytymisviiveellä) ja päivittyvät reaaliaikaisesti huoneen Top 10 -listalle.</p>
+      <p class="sub">Promillet lasketaan Widmarkin kaavalla (imeytymisviiveellä) ja päivittyvät reaaliaikaisesti huoneen Top 10 -listalle.</p>
 
       <div class="field" style="margin-top:0;">
         <label for="nameInput">Nimimerkki</label>
@@ -608,6 +610,16 @@
         </div>
       </div>
 
+      <!-- Juomistahti -->
+      <div class="field">
+        <label>3. Juomistahti</label>
+        <div class="pace-grid" id="paceGrid">
+          <button type="button" class="chip" data-pace="chug">⚡ Kellotettu</button>
+          <button type="button" class="chip active" data-pace="normal">🍺 Normaali</button>
+          <button type="button" class="chip" data-pace="slow">🐢 Hitaasti (~30 min)</button>
+        </div>
+      </div>
+
       <!-- Esikatselu -->
       <div class="preview-box">
         <div>
@@ -653,7 +665,7 @@
       <button type="button" class="btn-sec hidden" id="toggleAllUsersBtn" style="width:100%; margin-top:10px; min-height:42px; font-size:13px;">Näytä kaikki käyttäjät</button>
     </section>
 
-    <div class="footer">Bläkkisvuohi Lite • Widmark (35 min imeytyminen • 0,15 ‰/h) • Laskennallinen arvio</div>
+    <div class="footer">Bläkkisvuohi Lite • Widmark (imeytymisviive & ruokakerroin • 0,15 ‰/h) • Laskennallinen arvio</div>
   </div>
 
   <!-- Huoneen vaihto -modaali -->
@@ -728,7 +740,6 @@
       var ETHANOL_DENSITY = 0.789;
       var ABSORPTION_MINUTES = 35;
       var ABSORPTION_MS = ABSORPTION_MINUTES * 60000;
-      var ABSORPTION_HOURS = ABSORPTION_MINUTES / 60;
       var FED_ABSORPTION_MINUTES = 75;
       var FED_ABSORPTION_MS = FED_ABSORPTION_MINUTES * 60000;
       var MEAL_ACTIVE_MS = 3 * 3600000;
@@ -764,6 +775,7 @@
       var selectedVol = 0.33;
       var selectedVolLabel = "0,33 l Tölkki";
       var isCustomVol = false;
+      var selectedPace = "normal";
       var editR = state.r;
       var roomUsers = {};
       var showAllUsers = false;
@@ -918,8 +930,23 @@
           });
       }
 
-      // Juoman imeytymissegmentit (huomioi syömisen ennen tai kesken imeytymisen)
-      function buildDrinkSegments(ts, totalAdd, sortedMeals) {
+      // Imeytymisaika juomistahdin mukaan: kellotettu (20 min), normaali (35 min), hitaasti ~30 min (65 min)
+      function getBaseAbsorptionMs(pace) {
+        if (pace === "chug") return 20 * 60000;
+        if (pace === "slow") return 65 * 60000;
+        return ABSORPTION_MS;
+      }
+
+      function getFedAbsorptionMs(pace) {
+        if (pace === "chug") return 55 * 60000;
+        if (pace === "slow") return 105 * 60000;
+        return FED_ABSORPTION_MS;
+      }
+
+      // Juoman imeytymissegmentit (huomioi syömisen sekä juomistahdin)
+      function buildDrinkSegments(ts, totalAdd, sortedMeals, pace) {
+        var baseMs = getBaseAbsorptionMs(pace);
+        var fedMs = getFedAbsorptionMs(pace);
         var priorMeal = null;
         var midMeal = null;
 
@@ -927,27 +954,27 @@
           var mTs = sortedMeals[m];
           if (mTs <= ts && ts - mTs <= MEAL_ACTIVE_MS) {
             priorMeal = mTs;
-          } else if (mTs > ts && mTs < ts + ABSORPTION_MS && midMeal === null) {
+          } else if (mTs > ts && mTs < ts + baseMs && midMeal === null) {
             midMeal = mTs;
           }
         }
 
-        // Juotu täyteen vatsaan (3 h sisällä ateriasta): 75 min imeytyminen ja ~12 % matalampi huippu
+        // Juotu täyteen vatsaan (3 h sisällä ateriasta): hitaampi imeytyminen ja ~12 % matalampi huippu
         if (priorMeal !== null) {
           var fedAdd = totalAdd * 0.88;
           return [{
             start: ts,
-            end: ts + FED_ABSORPTION_MS,
-            rate: fedAdd / (FED_ABSORPTION_MS / 3600000)
+            end: ts + fedMs,
+            rate: fedAdd / (fedMs / 3600000)
           }];
         }
 
         // Syöty kesken juoman imeytymisen: loppuosa imeytyy hitaammin
         if (midMeal !== null) {
-          var fPre = (midMeal - ts) / ABSORPTION_MS;
+          var fPre = (midMeal - ts) / baseMs;
           var preAdd = totalAdd * fPre;
-          var remFastMs = (ts + ABSORPTION_MS) - midMeal;
-          var remFedMs = remFastMs * 2.1;
+          var remFastMs = (ts + baseMs) - midMeal;
+          var remFedMs = remFastMs * (fedMs / baseMs);
           var remAdd = totalAdd * (1 - fPre) * 0.90;
           var segs = [];
           if (midMeal > ts && preAdd > 0) {
@@ -967,15 +994,15 @@
           return segs;
         }
 
-        // Normaali imeytyminen (35 min)
+        // Normaali / kellotettu / hitaasti juotu tyhjään vatsaan
         return [{
           start: ts,
-          end: ts + ABSORPTION_MS,
-          rate: totalAdd / ABSORPTION_HOURS
+          end: ts + baseMs,
+          rate: totalAdd / (baseMs / 3600000)
         }];
       }
 
-      // Widmark-laskenta imeytymisviiveellä ja aterioilla
+      // Widmark-laskenta imeytymisviiveellä, juomistahdilla ja aterioilla
       function getBacStats(drinks, weight, r, nowMs, meals) {
         var empty = { current: 0, peak: 0, peakTs: nowMs, soberTs: nowMs, below05Ts: null, rising: false };
         if (!Array.isArray(drinks) || drinks.length === 0 || !weight || !r) return empty;
@@ -996,7 +1023,7 @@
           if (!isFinite(ts) || !isFinite(vol) || !isFinite(abv) || vol <= 0 || abv <= 0) continue;
           var grams = vol * 1000 * (abv / 100) * ETHANOL_DENSITY;
           var totalAdd = grams / (Number(weight) * Number(r));
-          var segs = buildDrinkSegments(ts, totalAdd, sortedMeals);
+          var segs = buildDrinkSegments(ts, totalAdd, sortedMeals, d.pace || "normal");
           for (var s = 0; s < segs.length; s++) {
             items.push(segs[s]);
             timeSet[segs[s].start] = true;
@@ -1111,7 +1138,7 @@
         var grams = vol * 1000 * (abv / 100) * ETHANOL_DENSITY;
         var rawDelta = state.weight > 0 ? grams / (state.weight * state.r) : 0;
         var delta = fed ? rawDelta * 0.88 : rawDelta;
-        var simulated = state.drinks.concat([{ vol: vol, abv: abv, ts: now }]);
+        var simulated = state.drinks.concat([{ vol: vol, abv: abv, ts: now, pace: selectedPace }]);
         var simStats = getBacStats(simulated, state.weight, state.r, now, state.meals);
         $("prevGrams").textContent = fmtFi(grams, 1) + " g";
         $("prevDelta").textContent = "+" + fmtFi(delta, 2) + " ‰";
@@ -1156,13 +1183,18 @@
             '</div>';
           } else {
             var d = item.data;
-            var segs = buildDrinkSegments(item.ts, 1, sortedMeals);
+            var paceTag = d.pace === "chug"
+              ? ' • <span style="color:#fde047;">⚡ Kellotettu</span>'
+              : d.pace === "slow"
+                ? ' • <span style="color:#93c5fd;">🐢 Hitaasti</span>'
+                : '';
+            var segs = buildDrinkSegments(item.ts, 1, sortedMeals, d.pace || "normal");
             var endTs = segs.length > 0 ? segs[segs.length - 1].end : item.ts + ABSORPTION_MS;
             var totalMs = Math.max(1, endTs - item.ts);
             var absPct = Math.min(100, Math.max(0, Math.round(((now - item.ts) / totalMs) * 100)));
             var absTag = absPct < 100 ? ' • <span style="color:var(--cyan);">imeytynyt ' + absPct + ' %</span>' : '';
             html += '<div class="h-item">' +
-              '<span><strong>' + fmtClock(d.ts) + '</strong> — ' + escapeHtml(d.label || (fmtFi(d.vol, 2) + ' l')) + ' (' + fmtFi(d.vol, 2) + ' l • ' + fmtFi(d.abv, 1) + ' %)' + absTag + '</span>' +
+              '<span><strong>' + fmtClock(d.ts) + '</strong> — ' + escapeHtml(d.label || (fmtFi(d.vol, 2) + ' l')) + ' (' + fmtFi(d.vol, 2) + ' l • ' + fmtFi(d.abv, 1) + ' %)' + paceTag + absTag + '</span>' +
               '<button type="button" class="h-del" data-del-type="drink" data-del-idx="' + item.idx + '" aria-label="Poista">✕</button>' +
             '</div>';
           }
@@ -1467,6 +1499,17 @@
         updatePreview();
       });
 
+      // Juomistahdin valinta (kellotettu / normaali / hitaasti ~30 min)
+      var paceChips = $("paceGrid").querySelectorAll(".chip");
+      for (var pIdx = 0; pIdx < paceChips.length; pIdx++) {
+        paceChips[pIdx].addEventListener("click", function () {
+          for (var j = 0; j < paceChips.length; j++) paceChips[j].classList.remove("active");
+          this.classList.add("active");
+          selectedPace = this.getAttribute("data-pace") || "normal";
+          updatePreview();
+        });
+      }
+
       // + Lisää hörppy
       function handleAddDrink() {
         var vol = getCurrentVol();
@@ -1480,13 +1523,15 @@
           vol: Math.round(vol * 1000) / 1000,
           abv: Math.round(abv * 10) / 10,
           label: label,
+          pace: selectedPace,
           ts: Date.now()
         });
         saveLocal();
         pushUserToCloud();
         renderHistory();
         tick();
-        showToast("Hörppy lisätty (" + fmtFi(vol, 2) + " l • " + fmtFi(abv, 1) + " %)");
+        var paceTxt = selectedPace === "chug" ? " • ⚡ Kellotettu" : selectedPace === "slow" ? " • 🐢 Hitaasti" : "";
+        showToast("Hörppy lisätty (" + fmtFi(vol, 2) + " l • " + fmtFi(abv, 1) + " %" + paceTxt + ")");
       }
 
       $("addDrinkBtn").addEventListener("click", handleAddDrink);
