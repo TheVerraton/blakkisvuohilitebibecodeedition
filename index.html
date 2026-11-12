@@ -532,7 +532,7 @@
 
       <div class="grid-2 field">
         <div>
-          <label for="weightInput">Paino (40–220 kg)</label>
+          <label for="weightInput">Paino (40–1000 kg)</label>
           <input id="weightInput" type="text" inputmode="decimal" placeholder="78" />
         </div>
         <div>
@@ -1423,8 +1423,8 @@
           $("nameInput").focus();
           return;
         }
-        if (!isFinite(weight) || weight < 40 || weight > 220) {
-          err.textContent = "Syötä paino väliltä 40–220 kg.";
+        if (!isFinite(weight) || weight < 40 || weight > 1000) {
+          err.textContent = "Syötä paino väliltä 40–1000 kg.";
           err.classList.remove("hidden");
           $("weightInput").focus();
           return;
@@ -1652,8 +1652,8 @@
           err.classList.remove("hidden");
           return;
         }
-        if (!isFinite(weight) || weight < 40 || weight > 220) {
-          err.textContent = "Syötä paino väliltä 40–220 kg.";
+        if (!isFinite(weight) || weight < 40 || weight > 1000) {
+          err.textContent = "Syötä paino väliltä 40–1000 kg.";
           err.classList.remove("hidden");
           return;
         }
