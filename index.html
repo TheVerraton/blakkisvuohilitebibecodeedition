@@ -212,6 +212,20 @@
       padding: 12px 14px;
     }
     .btn-sec:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-meal {
+      width: 100%;
+      min-height: 46px;
+      margin-top: 8px;
+      background: rgba(245, 158, 11, 0.12);
+      color: #fde68a;
+      border: 1.5px solid rgba(245, 158, 11, 0.4);
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      padding: 10px 14px;
+    }
+    .btn-meal:active { transform: scale(0.99); }
     .btn-danger {
       width: 100%;
       min-height: 46px;
@@ -320,7 +334,7 @@
     .action-row { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-top: 12px; }
     .action-row .btn-primary { margin-top: 0; }
 
-    /* Juomahistoria */
+    /* Juoma- ja ateriahistoria */
     .history-wrap {
       margin-top: 14px;
       padding-top: 12px;
@@ -344,6 +358,10 @@
       border-radius: 10px;
       padding: 8px 10px;
       font-size: 12px;
+    }
+    .h-item.meal {
+      border-color: rgba(245, 158, 11, 0.35);
+      background: rgba(245, 158, 11, 0.06);
     }
     .h-del {
       min-width: 34px;
@@ -503,7 +521,7 @@
     <section class="card" id="loginCard">
       <div class="eyebrow">Kirjaudu sisään</div>
       <h2>Syötä tietosi ja liity mukaan</h2>
-      <p class="sub">Promillet lasketaan Widmarkin kaavalla ja päivittyvät reaaliaikaisesti huoneen Top 10 -listalle.</p>
+      <p class="sub">Promillet lasketaan Widmarkin kaavalla (35 min imeytymisviiveellä) ja päivittyvät reaaliaikaisesti huoneen Top 10 -listalle.</p>
 
       <div class="field" style="margin-top:0;">
         <label for="nameInput">Nimimerkki</label>
@@ -547,13 +565,13 @@
       </div>
 
       <div class="bac-hero">
-        <div class="eyebrow">Promillet nyt</div>
+        <div class="eyebrow" id="bacEyebrow">Promillet nyt</div>
         <div class="bac-num" id="myBacVal">0,00 ‰</div>
       </div>
 
       <div class="sober-box">
         <div class="sober-main" id="soberMain">Selvinpäin nyt (0,00 ‰)</div>
-        <div class="sober-sub" id="soberSub">Palamisvauhti 0,15 ‰/h</div>
+        <div class="sober-sub" id="soberSub">Imeytyminen 35 min • Palamisvauhti 0,15 ‰/h</div>
       </div>
 
       <!-- Juomakoot -->
@@ -597,24 +615,25 @@
           <strong id="prevGrams">12,2 g</strong>
         </div>
         <div>
-          <span>Lisää</span>
+          <span>Vaikutus</span>
           <strong id="prevDelta" style="color:var(--lime);">+0,22 ‰</strong>
         </div>
         <div>
-          <span>Uusi lukema</span>
-          <strong id="prevTotal" style="color:var(--cyan);">0,22 ‰</strong>
+          <span>Huippuarvio</span>
+          <strong id="prevTotal" style="color:var(--cyan);">0,14 ‰</strong>
         </div>
       </div>
 
-      <!-- Lisää / Kumoa -->
+      <!-- Lisää / Kumoa / Söin -->
       <div class="action-row">
         <button type="button" class="btn-primary" id="addDrinkBtn">+ Lisää hörppy</button>
         <button type="button" class="btn-sec" id="undoBtn" disabled>Kumoa</button>
       </div>
+      <button type="button" class="btn-meal" id="addMealBtn">🍽️ Söin (hidastaa imeytymistä)</button>
 
-      <!-- Juomahistoria -->
+      <!-- Juoma- ja ateriahistoria -->
       <div class="history-wrap" id="historyWrap">
-        <label style="margin:0;">Omat hörpyt (<span id="drinkCountLabel">0</span>)</label>
+        <label style="margin:0;">Omat merkinnät (<span id="drinkCountLabel">0</span>)</label>
         <div class="history-list" id="historyList"></div>
       </div>
     </section>
@@ -623,7 +642,7 @@
     <section class="card">
       <div class="lb-head">
         <div>
-          <h2 style="margin:0; font-size:18px;">🏆 Top 10 -lista <span id="lbRoomTag" style="color:var(--cyan); font-size:13px;">#YLEINEN</span></h2>
+          <h2 style="margin:0; font-size:18px;">🏆 <span id="lbTitleText">Top 10 -lista</span> <span id="lbRoomTag" style="color:var(--cyan); font-size:13px;">#YLEINEN</span></h2>
           <div style="font-size:12px; color:var(--muted);">Päivittyy automaattisesti kaikilla laitteilla</div>
         </div>
         <span class="pill" id="userCountPill">0 mukana</span>
@@ -631,9 +650,10 @@
       <div class="lb-list" id="lbList">
         <div style="text-align:center; color:var(--muted); font-size:13px; padding:14px 0;">Haetaan huoneen tietoja...</div>
       </div>
+      <button type="button" class="btn-sec hidden" id="toggleAllUsersBtn" style="width:100%; margin-top:10px; min-height:42px; font-size:13px;">Näytä kaikki käyttäjät</button>
     </section>
 
-    <div class="footer">Bläkkisvuohi Lite • Widmark (0,15 ‰/h) • Laskennallinen arvio</div>
+    <div class="footer">Bläkkisvuohi Lite • Widmark (35 min imeytyminen • 0,15 ‰/h) • Laskennallinen arvio</div>
   </div>
 
   <!-- Huoneen vaihto -modaali -->
@@ -706,6 +726,12 @@
       var STORAGE_KEY = "blakkisvuohi_lite_state_v3";
       var BURN_RATE = 0.15;
       var ETHANOL_DENSITY = 0.789;
+      var ABSORPTION_MINUTES = 35;
+      var ABSORPTION_MS = ABSORPTION_MINUTES * 60000;
+      var ABSORPTION_HOURS = ABSORPTION_MINUTES / 60;
+      var FED_ABSORPTION_MINUTES = 75;
+      var FED_ABSORPTION_MS = FED_ABSORPTION_MINUTES * 60000;
+      var MEAL_ACTIVE_MS = 3 * 3600000;
 
       var state = {
         uid: "u_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7),
@@ -714,7 +740,8 @@
         r: 0.70,
         room: "YLEINEN",
         loggedIn: false,
-        drinks: []
+        drinks: [],
+        meals: []
       };
 
       try {
@@ -729,6 +756,7 @@
             state.room = cleanRoom(parsed.room || "YLEINEN");
             state.loggedIn = Boolean(parsed.loggedIn && parsed.name);
             state.drinks = Array.isArray(parsed.drinks) ? parsed.drinks : [];
+            state.meals = Array.isArray(parsed.meals) ? parsed.meals : [];
           }
         }
       } catch (e) {}
@@ -738,6 +766,7 @@
       var isCustomVol = false;
       var editR = state.r;
       var roomUsers = {};
+      var showAllUsers = false;
       var lastLocalWrite = 0;
       var toastTimer = null;
 
@@ -817,6 +846,7 @@
           weight: state.weight,
           r: state.r,
           drinks: state.drinks,
+          meals: state.meals,
           updatedAt: lastLocalWrite
         };
         roomUsers[state.uid] = payload;
@@ -866,7 +896,6 @@
             var incoming = data && typeof data === "object" ? data : {};
             roomUsers = incoming;
 
-            // Varmistetaan ettei vanhentunut pollaus ylikirjoita juuri tehtyä paikallista muutosta
             if (state.loggedIn && state.name) {
               var remoteMe = roomUsers[state.uid];
               if (!remoteMe || (remoteMe.updatedAt || 0) < lastLocalWrite) {
@@ -876,6 +905,7 @@
                   weight: state.weight,
                   r: state.r,
                   drinks: state.drinks,
+                  meals: state.meals,
                   updatedAt: lastLocalWrite || Date.now()
                 };
                 if (!remoteMe) pushUserToCloud();
@@ -888,26 +918,176 @@
           });
       }
 
-      // Kronologinen Widmark-laskenta
-      function calcBac(drinks, weight, r, nowMs) {
-        if (!Array.isArray(drinks) || drinks.length === 0 || !weight || !r) return 0;
-        var sorted = drinks.slice().sort(function (a, b) {
-          return Number(a.ts) - Number(b.ts);
-        });
-        var bac = 0;
-        var lastTs = Number(sorted[0].ts);
-        for (var i = 0; i < sorted.length; i++) {
-          var d = sorted[i];
-          var ts = Math.min(Number(d.ts), nowMs);
-          var dtHours = Math.max(0, (ts - lastTs) / 3600000);
-          bac = Math.max(0, bac - BURN_RATE * dtHours);
-          var grams = Number(d.vol) * 1000 * (Number(d.abv) / 100) * ETHANOL_DENSITY;
-          bac += grams / (Number(weight) * Number(r));
-          lastTs = ts;
+      // Juoman imeytymissegmentit (huomioi syömisen ennen tai kesken imeytymisen)
+      function buildDrinkSegments(ts, totalAdd, sortedMeals) {
+        var priorMeal = null;
+        var midMeal = null;
+
+        for (var m = 0; m < sortedMeals.length; m++) {
+          var mTs = sortedMeals[m];
+          if (mTs <= ts && ts - mTs <= MEAL_ACTIVE_MS) {
+            priorMeal = mTs;
+          } else if (mTs > ts && mTs < ts + ABSORPTION_MS && midMeal === null) {
+            midMeal = mTs;
+          }
         }
-        var tailHours = Math.max(0, (nowMs - lastTs) / 3600000);
-        bac = Math.max(0, bac - BURN_RATE * tailHours);
-        return bac < 0.005 ? 0 : bac;
+
+        // Juotu täyteen vatsaan (3 h sisällä ateriasta): 75 min imeytyminen ja ~12 % matalampi huippu
+        if (priorMeal !== null) {
+          var fedAdd = totalAdd * 0.88;
+          return [{
+            start: ts,
+            end: ts + FED_ABSORPTION_MS,
+            rate: fedAdd / (FED_ABSORPTION_MS / 3600000)
+          }];
+        }
+
+        // Syöty kesken juoman imeytymisen: loppuosa imeytyy hitaammin
+        if (midMeal !== null) {
+          var fPre = (midMeal - ts) / ABSORPTION_MS;
+          var preAdd = totalAdd * fPre;
+          var remFastMs = (ts + ABSORPTION_MS) - midMeal;
+          var remFedMs = remFastMs * 2.1;
+          var remAdd = totalAdd * (1 - fPre) * 0.90;
+          var segs = [];
+          if (midMeal > ts && preAdd > 0) {
+            segs.push({
+              start: ts,
+              end: midMeal,
+              rate: preAdd / ((midMeal - ts) / 3600000)
+            });
+          }
+          if (remFedMs > 0 && remAdd > 0) {
+            segs.push({
+              start: midMeal,
+              end: midMeal + remFedMs,
+              rate: remAdd / (remFedMs / 3600000)
+            });
+          }
+          return segs;
+        }
+
+        // Normaali imeytyminen (35 min)
+        return [{
+          start: ts,
+          end: ts + ABSORPTION_MS,
+          rate: totalAdd / ABSORPTION_HOURS
+        }];
+      }
+
+      // Widmark-laskenta imeytymisviiveellä ja aterioilla
+      function getBacStats(drinks, weight, r, nowMs, meals) {
+        var empty = { current: 0, peak: 0, peakTs: nowMs, soberTs: nowMs, below05Ts: null, rising: false };
+        if (!Array.isArray(drinks) || drinks.length === 0 || !weight || !r) return empty;
+
+        var sortedMeals = Array.isArray(meals)
+          ? meals.map(Number).filter(isFinite).sort(function (a, b) { return a - b; })
+          : [];
+
+        var items = [];
+        var timeSet = {};
+        timeSet[nowMs] = true;
+
+        for (var i = 0; i < drinks.length; i++) {
+          var d = drinks[i];
+          var ts = Number(d.ts);
+          var vol = Number(d.vol);
+          var abv = Number(d.abv);
+          if (!isFinite(ts) || !isFinite(vol) || !isFinite(abv) || vol <= 0 || abv <= 0) continue;
+          var grams = vol * 1000 * (abv / 100) * ETHANOL_DENSITY;
+          var totalAdd = grams / (Number(weight) * Number(r));
+          var segs = buildDrinkSegments(ts, totalAdd, sortedMeals);
+          for (var s = 0; s < segs.length; s++) {
+            items.push(segs[s]);
+            timeSet[segs[s].start] = true;
+            timeSet[segs[s].end] = true;
+          }
+        }
+
+        if (items.length === 0) return empty;
+
+        var times = Object.keys(timeSet).map(Number).sort(function (a, b) {
+          return a - b;
+        });
+
+        var bac = 0;
+        var currentBac = 0;
+        var peakBac = 0;
+        var peakTs = nowMs;
+        var soberTs = nowMs;
+        var below05Ts = null;
+
+        if (times[0] === nowMs) currentBac = 0;
+
+        for (var tIdx = 0; tIdx < times.length - 1; tIdx++) {
+          var t0 = times[tIdx];
+          var t1 = times[tIdx + 1];
+          var dtHours = (t1 - t0) / 3600000;
+          if (dtHours <= 0) continue;
+
+          var absorbRate = 0;
+          for (var j = 0; j < items.length; j++) {
+            if (items[j].start <= t0 + 0.5 && items[j].end >= t1 - 0.5) {
+              absorbRate += items[j].rate;
+            }
+          }
+
+          var nextBac = Math.max(0, bac + (absorbRate - BURN_RATE) * dtHours);
+
+          if (t1 >= nowMs) {
+            if (nextBac > peakBac) {
+              peakBac = nextBac;
+              peakTs = t1;
+            }
+            if (bac > 0.50 && nextBac <= 0.50 && below05Ts === null) {
+              var frac05 = (bac - 0.50) / (bac - nextBac);
+              below05Ts = t0 + frac05 * (t1 - t0);
+            }
+            if (bac > 0 && nextBac === 0) {
+              var frac0 = bac / (bac - nextBac);
+              soberTs = t0 + frac0 * (t1 - t0);
+            }
+          }
+
+          bac = nextBac;
+          if (t1 === nowMs) {
+            currentBac = bac;
+            if (currentBac >= peakBac) {
+              peakBac = currentBac;
+              peakTs = nowMs;
+            }
+          }
+        }
+
+        var lastT = times[times.length - 1];
+        if (lastT >= nowMs && bac > 0) {
+          if (bac > 0.50 && below05Ts === null) {
+            below05Ts = lastT + ((bac - 0.50) / BURN_RATE) * 3600000;
+          }
+          soberTs = lastT + (bac / BURN_RATE) * 3600000;
+        }
+
+        var curClean = currentBac < 0.005 ? 0 : currentBac;
+        var peakClean = peakBac < 0.005 ? 0 : peakBac;
+        var rising = peakClean > curClean + 0.005 && peakTs > nowMs + 10000;
+
+        return {
+          current: curClean,
+          peak: peakClean,
+          peakTs: peakTs,
+          soberTs: soberTs,
+          below05Ts: below05Ts,
+          rising: rising
+        };
+      }
+
+      function hasActiveMeal(nowMs, meals) {
+        if (!Array.isArray(meals)) return false;
+        for (var i = 0; i < meals.length; i++) {
+          var diff = nowMs - Number(meals[i]);
+          if (diff >= 0 && diff <= MEAL_ACTIVE_MS) return true;
+        }
+        return false;
       }
 
       function getCurrentVol() {
@@ -926,31 +1106,66 @@
       function updatePreview() {
         var vol = getCurrentVol();
         var abv = getCurrentAbv();
+        var now = Date.now();
+        var fed = hasActiveMeal(now, state.meals);
         var grams = vol * 1000 * (abv / 100) * ETHANOL_DENSITY;
-        var delta = state.weight > 0 ? grams / (state.weight * state.r) : 0;
-        var curBac = calcBac(state.drinks, state.weight, state.r, Date.now());
+        var rawDelta = state.weight > 0 ? grams / (state.weight * state.r) : 0;
+        var delta = fed ? rawDelta * 0.88 : rawDelta;
+        var simulated = state.drinks.concat([{ vol: vol, abv: abv, ts: now }]);
+        var simStats = getBacStats(simulated, state.weight, state.r, now, state.meals);
         $("prevGrams").textContent = fmtFi(grams, 1) + " g";
         $("prevDelta").textContent = "+" + fmtFi(delta, 2) + " ‰";
-        $("prevTotal").textContent = fmtFi(curBac + delta, 2) + " ‰";
+        $("prevTotal").textContent = fmtFi(simStats.peak, 2) + " ‰";
       }
 
       function renderHistory() {
         var list = $("historyList");
-        $("drinkCountLabel").textContent = String(state.drinks.length);
-        $("undoBtn").disabled = state.drinks.length === 0;
+        var totalEntries = state.drinks.length + state.meals.length;
+        $("drinkCountLabel").textContent = String(totalEntries);
+        $("undoBtn").disabled = totalEntries === 0;
 
-        if (state.drinks.length === 0) {
-          list.innerHTML = '<div style="font-size:12px; color:var(--muted); text-align:center; padding:8px 0;">Ei vielä kirjattuja hörppyjä.</div>';
+        if (totalEntries === 0) {
+          list.innerHTML = '<div style="font-size:12px; color:var(--muted); text-align:center; padding:8px 0;">Ei vielä kirjattuja hörppyjä tai aterioita.</div>';
           return;
         }
 
+        var now = Date.now();
+        var sortedMeals = state.meals.map(Number).filter(isFinite).sort(function (a, b) { return a - b; });
+        var entries = [];
+
+        for (var i = 0; i < state.drinks.length; i++) {
+          entries.push({ type: "drink", idx: i, ts: Number(state.drinks[i].ts), data: state.drinks[i] });
+        }
+        for (var m = 0; m < state.meals.length; m++) {
+          entries.push({ type: "meal", idx: m, ts: Number(state.meals[m]) });
+        }
+
+        entries.sort(function (a, b) {
+          return b.ts - a.ts;
+        });
+
         var html = "";
-        for (var i = state.drinks.length - 1; i >= 0; i--) {
-          var d = state.drinks[i];
-          html += '<div class="h-item">' +
-            '<span><strong>' + fmtClock(d.ts) + '</strong> — ' + escapeHtml(d.label || (fmtFi(d.vol, 2) + ' l')) + ' (' + fmtFi(d.vol, 2) + ' l • ' + fmtFi(d.abv, 1) + ' %)</span>' +
-            '<button type="button" class="h-del" data-del-idx="' + i + '" aria-label="Poista">✕</button>' +
-          '</div>';
+        for (var e = 0; e < entries.length; e++) {
+          var item = entries[e];
+          if (item.type === "meal") {
+            var mealActive = (now - item.ts) >= 0 && (now - item.ts) <= MEAL_ACTIVE_MS;
+            var mealBadge = mealActive ? ' • <span style="color:#fde68a;">hidastaa imeytymistä</span>' : '';
+            html += '<div class="h-item meal">' +
+              '<span><strong>' + fmtClock(item.ts) + '</strong> — 🍽️ Ateria' + mealBadge + '</span>' +
+              '<button type="button" class="h-del" data-del-type="meal" data-del-idx="' + item.idx + '" aria-label="Poista">✕</button>' +
+            '</div>';
+          } else {
+            var d = item.data;
+            var segs = buildDrinkSegments(item.ts, 1, sortedMeals);
+            var endTs = segs.length > 0 ? segs[segs.length - 1].end : item.ts + ABSORPTION_MS;
+            var totalMs = Math.max(1, endTs - item.ts);
+            var absPct = Math.min(100, Math.max(0, Math.round(((now - item.ts) / totalMs) * 100)));
+            var absTag = absPct < 100 ? ' • <span style="color:var(--cyan);">imeytynyt ' + absPct + ' %</span>' : '';
+            html += '<div class="h-item">' +
+              '<span><strong>' + fmtClock(d.ts) + '</strong> — ' + escapeHtml(d.label || (fmtFi(d.vol, 2) + ' l')) + ' (' + fmtFi(d.vol, 2) + ' l • ' + fmtFi(d.abv, 1) + ' %)' + absTag + '</span>' +
+              '<button type="button" class="h-del" data-del-type="drink" data-del-idx="' + item.idx + '" aria-label="Poista">✕</button>' +
+            '</div>';
+          }
         }
         list.innerHTML = html;
 
@@ -958,12 +1173,18 @@
         for (var j = 0; j < delBtns.length; j++) {
           delBtns[j].addEventListener("click", function () {
             var idx = Number(this.getAttribute("data-del-idx"));
-            state.drinks.splice(idx, 1);
+            var type = this.getAttribute("data-del-type");
+            if (type === "meal") {
+              state.meals.splice(idx, 1);
+              showToast("Ateria poistettu");
+            } else {
+              state.drinks.splice(idx, 1);
+              showToast("Hörppy poistettu");
+            }
             saveLocal();
             pushUserToCloud();
             renderHistory();
             tick();
-            showToast("Hörppy poistettu");
           });
         }
       }
@@ -982,7 +1203,8 @@
             name: state.name,
             weight: state.weight,
             r: state.r,
-            drinks: state.drinks
+            drinks: state.drinks,
+            meals: state.meals
           };
         }
 
@@ -990,7 +1212,12 @@
         $("userCountPill").textContent = keys.length + " mukana";
         $("lbRoomTag").textContent = "#" + state.room;
 
+        var toggleBtn = $("toggleAllUsersBtn");
+
         if (keys.length === 0) {
+          showAllUsers = false;
+          toggleBtn.classList.add("hidden");
+          $("lbTitleText").textContent = "Top 10 -lista";
           $("lbList").innerHTML = '<div style="text-align:center; color:var(--muted); font-size:13px; padding:14px 0;">Ei vielä osallistujia huoneessa #' + escapeHtml(state.room) + '.</div>';
           return;
         }
@@ -998,14 +1225,20 @@
         var rows = keys.map(function (uid) {
           var u = map[uid];
           var drinks = Array.isArray(u.drinks) ? u.drinks : [];
-          var bac = calcBac(drinks, Number(u.weight) || 78, Number(u.r) || 0.70, now);
-          var hLeft = bac / BURN_RATE;
+          var meals = Array.isArray(u.meals) ? u.meals : [];
+          var stats = getBacStats(drinks, Number(u.weight) || 78, Number(u.r) || 0.70, now, meals);
+          var metaStatus = stats.rising
+            ? "↗ Huippu " + fmtFi(stats.peak, 2) + " ‰ klo " + fmtClock(stats.peakTs)
+            : stats.current > 0
+              ? "Selvä klo " + fmtClock(stats.soberTs)
+              : "Selvinpäin";
           return {
             uid: uid,
             name: u.name || "Tuntematon",
-            bac: bac,
+            bac: stats.current,
+            rising: stats.rising,
             count: drinks.length,
-            soberText: bac > 0 ? "Selvä klo " + fmtClock(now + hLeft * 3600000) : "Selvinpäin"
+            soberText: metaStatus
           };
         });
 
@@ -1013,14 +1246,27 @@
           return b.bac - a.bac;
         });
 
-        var top10 = rows.slice(0, 10);
+        if (rows.length > 10) {
+          toggleBtn.classList.remove("hidden");
+          toggleBtn.textContent = showAllUsers
+            ? "Näytä vain Top 10"
+            : "Näytä kaikki käyttäjät (" + rows.length + ")";
+        } else {
+          showAllUsers = false;
+          toggleBtn.classList.add("hidden");
+        }
+
+        $("lbTitleText").textContent = showAllUsers ? "Kaikki käyttäjät" : "Top 10 -lista";
+        var visibleRows = showAllUsers ? rows : rows.slice(0, 10);
+
         var html = "";
-        for (var i = 0; i < top10.length; i++) {
-          var p = top10[i];
+        for (var i = 0; i < visibleRows.length; i++) {
+          var p = visibleRows[i];
           var isMe = state.loggedIn && p.uid === state.uid;
           var rClass = i === 0 ? "r1" : i === 1 ? "r2" : i === 2 ? "r3" : "";
           var medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : (i + 1) + ".";
           var bacColor = p.bac >= 2.0 ? "var(--danger)" : p.bac >= 1.2 ? "var(--orange)" : p.bac >= 0.5 ? "var(--amber)" : "var(--lime)";
+          var trendArrow = p.rising ? ' <span style="font-size:12px; color:var(--cyan);">↗</span>' : '';
 
           html += '<div class="lb-row' + (isMe ? ' me' : '') + '">' +
             '<div class="lb-left">' +
@@ -1030,32 +1276,47 @@
                 '<div class="lb-meta">' + p.count + ' juomaa • ' + p.soberText + '</div>' +
               '</div>' +
             '</div>' +
-            '<div class="lb-bac" style="color:' + bacColor + ';">' + fmtFi(p.bac, 2) + ' ‰</div>' +
+            '<div class="lb-bac" style="color:' + bacColor + ';">' + fmtFi(p.bac, 2) + ' ‰' + trendArrow + '</div>' +
           '</div>';
         }
         $("lbList").innerHTML = html;
       }
 
+      var lastHistoryMinute = -1;
+
       function tick() {
         var now = Date.now();
         if (state.loggedIn) {
-          var bac = calcBac(state.drinks, state.weight, state.r, now);
+          var stats = getBacStats(state.drinks, state.weight, state.r, now, state.meals);
+          var fed = hasActiveMeal(now, state.meals);
+          var bac = stats.current;
           var el = $("myBacVal");
           el.textContent = fmtFi(bac, 2) + " ‰";
-          el.className = "bac-num" + (bac >= 2.0 ? " c-danger" : bac >= 1.2 ? " c-orange" : bac >= 0.5 ? " c-amber" : bac > 0 ? " c-cyan" : "");
+          el.className = "bac-num" + (bac >= 2.0 ? " c-danger" : bac >= 1.2 ? " c-orange" : bac >= 0.5 ? " c-amber" : (bac > 0 || stats.rising) ? " c-cyan" : "");
+          $("bacEyebrow").textContent = stats.rising ? "Promillet nyt (nousussa ↗)" : "Promillet nyt";
 
-          if (bac <= 0) {
+          if (stats.rising) {
+            $("soberMain").textContent = "Huippu " + fmtFi(stats.peak, 2) + " ‰ klo " + fmtClock(stats.peakTs);
+            var hSoberRise = Math.max(0, (stats.soberTs - now) / 3600000);
+            $("soberSub").textContent = "Selvinpäin klo " + fmtClock(stats.soberTs) + " (" + fmtDuration(hSoberRise) + ")" + (fed ? " • 🍽️ Ruoka hidastaa" : "");
+          } else if (bac <= 0) {
             $("soberMain").textContent = "Selvinpäin nyt (0,00 ‰)";
-            $("soberSub").textContent = "Ei aktiivista alkoholia veressä";
+            $("soberSub").textContent = fed ? "🍽️ Ateria kirjattu (hidastaa seuraavien juomien imeytymistä)" : "Ei aktiivista alkoholia veressä";
           } else {
-            var hZero = bac / BURN_RATE;
-            $("soberMain").textContent = "Selvinpäin klo " + fmtClock(now + hZero * 3600000) + " (" + fmtDuration(hZero) + ")";
-            if (bac > 0.50) {
-              var h05 = (bac - 0.50) / BURN_RATE;
-              $("soberSub").textContent = "Alle 0,50 ‰ klo " + fmtClock(now + h05 * 3600000) + " (" + fmtDuration(h05) + ")";
+            var hZero = Math.max(0, (stats.soberTs - now) / 3600000);
+            $("soberMain").textContent = "Selvinpäin klo " + fmtClock(stats.soberTs) + " (" + fmtDuration(hZero) + ")";
+            if (bac > 0.50 && stats.below05Ts) {
+              var h05 = Math.max(0, (stats.below05Ts - now) / 3600000);
+              $("soberSub").textContent = "Alle 0,50 ‰ klo " + fmtClock(stats.below05Ts) + " (" + fmtDuration(h05) + ")";
             } else {
               $("soberSub").textContent = "Jo alle 0,50 ‰ rajan • Palaminen 0,15 ‰/h";
             }
+          }
+
+          var curMin = Math.floor(now / 60000);
+          if (curMin !== lastHistoryMinute) {
+            lastHistoryMinute = curMin;
+            renderHistory();
           }
           updatePreview();
         }
@@ -1098,6 +1359,15 @@
         }
       }
 
+      function bindEnter(inputId, actionFn) {
+        $(inputId).addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            actionFn();
+          }
+        });
+      }
+
       // Sukupuolinapit kirjautumisessa
       $("maleBtn").addEventListener("click", function () {
         state.r = 0.70;
@@ -1109,7 +1379,7 @@
       });
 
       // Liity mukaan
-      $("joinBtn").addEventListener("click", function () {
+      function handleJoin() {
         var name = $("nameInput").value.trim();
         var weight = parseNum($("weightInput").value);
         var room = cleanRoom($("roomInput").value);
@@ -1136,12 +1406,20 @@
         state.loggedIn = true;
 
         saveLocal();
-        if (roomChanged) roomUsers = {};
+        if (roomChanged) {
+          roomUsers = {};
+          showAllUsers = false;
+        }
         pushUserToCloud();
         pollRoomFromCloud();
         showDashboard();
         showToast("Tervetuloa mukaan, " + state.name + "!");
-      });
+      }
+
+      $("joinBtn").addEventListener("click", handleJoin);
+      bindEnter("nameInput", handleJoin);
+      bindEnter("weightInput", handleJoin);
+      bindEnter("roomInput", handleJoin);
 
       // Juomakoon valinta
       var volChips = $("volGrid").querySelectorAll(".chip");
@@ -1190,7 +1468,7 @@
       });
 
       // + Lisää hörppy
-      $("addDrinkBtn").addEventListener("click", function () {
+      function handleAddDrink() {
         var vol = getCurrentVol();
         var abv = getCurrentAbv();
         if (vol <= 0 || abv <= 0) {
@@ -1209,17 +1487,45 @@
         renderHistory();
         tick();
         showToast("Hörppy lisätty (" + fmtFi(vol, 2) + " l • " + fmtFi(abv, 1) + " %)");
-      });
+      }
 
-      // Kumoa viimeisin
-      $("undoBtn").addEventListener("click", function () {
-        if (state.drinks.length === 0) return;
-        state.drinks.pop();
+      $("addDrinkBtn").addEventListener("click", handleAddDrink);
+      bindEnter("customVolInput", handleAddDrink);
+      bindEnter("abvInput", handleAddDrink);
+
+      // 🍽️ Söin
+      $("addMealBtn").addEventListener("click", function () {
+        state.meals.push(Date.now());
         saveLocal();
         pushUserToCloud();
         renderHistory();
         tick();
-        showToast("Viimeisin hörppy kumottu");
+        showToast("Ateria kirjattu – imeytyminen hidastettu");
+      });
+
+      // Kumoa viimeisin (hörppy tai ateria)
+      $("undoBtn").addEventListener("click", function () {
+        var lastDrinkTs = state.drinks.length > 0 ? Number(state.drinks[state.drinks.length - 1].ts) : -1;
+        var lastMealTs = state.meals.length > 0 ? Number(state.meals[state.meals.length - 1]) : -1;
+        if (lastDrinkTs < 0 && lastMealTs < 0) return;
+
+        if (lastMealTs >= lastDrinkTs) {
+          state.meals.pop();
+          showToast("Viimeisin ateria kumottu");
+        } else {
+          state.drinks.pop();
+          showToast("Viimeisin hörppy kumottu");
+        }
+        saveLocal();
+        pushUserToCloud();
+        renderHistory();
+        tick();
+      });
+
+      // Näytä kaikki käyttäjät / Top 10
+      $("toggleAllUsersBtn").addEventListener("click", function () {
+        showAllUsers = !showAllUsers;
+        renderLeaderboard();
       });
 
       // Huoneen vaihto -modaali
@@ -1234,6 +1540,7 @@
         }
         state.room = nextRoom;
         roomUsers = {};
+        showAllUsers = false;
         saveLocal();
         syncRoomLabels();
         if (state.loggedIn) {
@@ -1251,10 +1558,16 @@
       $("closeRoomModal").addEventListener("click", function () {
         $("roomModal").classList.add("hidden");
       });
+      $("roomModal").addEventListener("click", function (e) {
+        if (e.target === $("roomModal")) $("roomModal").classList.add("hidden");
+      });
       $("pickPublicRoomBtn").addEventListener("click", function () {
         switchRoom("YLEINEN");
       });
       $("saveRoomModalBtn").addEventListener("click", function () {
+        switchRoom($("modalRoomInput").value || "YLEINEN");
+      });
+      bindEnter("modalRoomInput", function () {
         switchRoom($("modalRoomInput").value || "YLEINEN");
       });
 
@@ -1271,6 +1584,9 @@
       $("closeEditModal").addEventListener("click", function () {
         $("editModal").classList.add("hidden");
       });
+      $("editModal").addEventListener("click", function (e) {
+        if (e.target === $("editModal")) $("editModal").classList.add("hidden");
+      });
       $("editMaleBtn").addEventListener("click", function () {
         editR = 0.70;
         setGenderButtons("editMaleBtn", "editFemaleBtn", 0.70);
@@ -1280,7 +1596,7 @@
         setGenderButtons("editMaleBtn", "editFemaleBtn", 0.60);
       });
 
-      $("saveEditBtn").addEventListener("click", function () {
+      function handleSaveEdit() {
         var name = $("editNameInput").value.trim();
         var weight = parseNum($("editWeightInput").value);
         var nextRoom = cleanRoom($("editRoomInput").value);
@@ -1301,6 +1617,7 @@
         if (nextRoom !== oldRoom) {
           deleteUserFromCloud(oldRoom);
           roomUsers = {};
+          showAllUsers = false;
         }
 
         state.name = name;
@@ -1313,6 +1630,18 @@
         pollRoomFromCloud();
         showDashboard();
         showToast("Tiedot päivitetty");
+      }
+
+      $("saveEditBtn").addEventListener("click", handleSaveEdit);
+      bindEnter("editNameInput", handleSaveEdit);
+      bindEnter("editWeightInput", handleSaveEdit);
+      bindEnter("editRoomInput", handleSaveEdit);
+
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") {
+          $("roomModal").classList.add("hidden");
+          $("editModal").classList.add("hidden");
+        }
       });
 
       $("leaveRoomBtn").addEventListener("click", function () {
