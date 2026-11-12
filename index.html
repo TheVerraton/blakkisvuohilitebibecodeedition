@@ -15,16 +15,16 @@
     <meta name="description" content="Reaaliaikainen promillelaskuri, selviämisennuste ja jaettu Top 10 -tulostaulu.">
 
     <!-- Inline SVG -sovellusikoni -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)' viewBox='0 0 128 128'%3E%3Crect width='128' height='128' rx='28' fill='%230b0f17'/%3E%3Crect x='6' y='6' width='116' height='116' rx='24' fill='none' stroke='%2384cc16' stroke-width='4' stroke-opacity='0.6'/%3E%3Ctext x='64' y='84' font-size='68' text-anchor='middle'%3E%F0%9F%90%90%3C/text%3E%3C/svg%3E">
-    <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,%3Csvg xmlns='[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%23131a26'/%3E%3Ctext x='90' y='118' font-size='96' text-anchor='middle'%3E%F0%9F%90%90%3C/text%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Crect width='128' height='128' rx='28' fill='%230b0f17'/%3E%3Crect x='6' y='6' width='116' height='116' rx='24' fill='none' stroke='%2384cc16' stroke-width='4' stroke-opacity='0.6'/%3E%3Ctext x='64' y='84' font-size='68' text-anchor='middle'%3E%F0%9F%90%90%3C/text%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%23131a26'/%3E%3Ctext x='90' y='118' font-size='96' text-anchor='middle'%3E%F0%9F%90%90%3C/text%3E%3C/svg%3E">
 
     <!-- Google Fonts: Inter -->
-    <link rel="preconnect" href="[https://fonts.googleapis.com](https://fonts.googleapis.com)">
-    <link rel="preconnect" href="[https://fonts.gstatic.com](https://fonts.gstatic.com)" crossorigin>
-    <link href="[https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap)" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <!-- Tailwind CSS -->
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -43,7 +43,7 @@
     <!-- Kelluva ilmoituspalkki (Toast) -->
     <div id="toast-container" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4 pointer-events-none flex flex-col gap-2"></div>
 
-    <!-- Mukautettu vahvistusikkuna -->
+    <!-- Mukautettu vahvistusikkuna (korvaa selaimen confirm-ikkunan) -->
     <div id="confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
         <div class="bg-[#131a26] border border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
             <div class="flex items-center gap-3">
@@ -553,8 +553,8 @@
 
     <!-- Firebase Realtime Database v11.0.0 & Sovelluslogiikka -->
     <script type="module">
-        import { initializeApp } from "[https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js](https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js)";
-        import { getDatabase, ref, set, remove, onValue, off } from "[https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js](https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js)";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+        import { getDatabase, ref, set, remove, onValue, off } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
 
         // =========================================================================
         // 1. FIREBASE-KONFIGURAATIO
@@ -562,7 +562,7 @@
         const firebaseConfig = {
             apiKey: "AIzaSyD7kRAHftipai9uQHyGkPlAXSIwSKDnxjI",
             authDomain: "blakkislite.firebaseapp.com",
-            databaseURL: "[https://blakkislite-default-rtdb.europe-west1.firebasedatabase.app](https://blakkislite-default-rtdb.europe-west1.firebasedatabase.app)",
+            databaseURL: "https://blakkislite-default-rtdb.europe-west1.firebasedatabase.app",
             projectId: "blakkislite",
             storageBucket: "blakkislite.firebasestorage.app",
             messagingSenderId: "1090296320334",
@@ -575,9 +575,9 @@
         // =========================================================================
         // 2. VAKIOT & PAIKALLINEN TILA (localStorage)
         // =========================================================================
-        const ETHANOL_DENSITY = 0.789;          // g/ml
-        const ELIMINATION_RATE_PER_HOUR = 0.15; // 0,15 ‰ tunnissa
-        const STANDARD_DRINK_GRAMS = 12.0;      // 1 suomalainen annos = 12 g
+        const ETHANOL_DENSITY = 0.789;          // Etanolin tiheys g/ml
+        const ELIMINATION_RATE_PER_HOUR = 0.15; // Alkoholin palamisvauhti 0,15 ‰/h
+        const STANDARD_DRINK_GRAMS = 12.0;      // 1 suomalainen annos = 12 g puhdasta alkoholia
         const DEFAULT_ROOM = "YLEINEN";
         const STORAGE_KEY = "blakkisvuohi_lite_profile_v1";
 
@@ -585,6 +585,7 @@
         let activeRoomCode = localProfile.roomCode || DEFAULT_ROOM;
         let roomUsersMap = {};
         let activeRoomRef = null;
+        let appInitialized = false;
 
         let loginGender = localProfile.gender || "male";
         let editGender = localProfile.gender || "male";
@@ -647,6 +648,9 @@
             }
         }
 
+        /**
+         * Normalisoi Firebasen palauttaman juomataulukon.
+         */
         function normalizeDrinks(drinksField) {
             if (Array.isArray(drinksField)) {
                 return drinksField.filter(Boolean);
@@ -773,6 +777,12 @@
         // 4. KRONOLOGINEN WIDMARK-LASKENTA
         // =========================================================================
 
+        /**
+         * Laskee käyttäjän tämänhetkiset promillet juomien aikaleimojen perusteella:
+         * - Puhdas alkoholi (g) = tilavuus (l) * 1000 * (abv / 100) * 0,789
+         * - Promillelisäys = g / (paino * r), jossa r = 0,70 (Mies) tai 0,60 (Nainen)
+         * - Palaminen 0,15 ‰/h juomien välissä ja viimeisen juoman jälkeen (ei koskaan alle 0,00 ‰)
+         */
         function calculateUserBac(userObj, nowMs = Date.now()) {
             const weight = Number(userObj.weight) || 75;
             const r = userObj.gender === "female" ? 0.60 : 0.70;
@@ -1689,6 +1699,9 @@
         // =========================================================================
 
         function initApp() {
+            if (appInitialized) return;
+            appInitialized = true;
+
             setupEventListeners();
             subscribeConnectionStatus();
             subscribeToRoom(activeRoomCode);
@@ -1712,3 +1725,4 @@
     </script>
 </body>
 </html>
+```
